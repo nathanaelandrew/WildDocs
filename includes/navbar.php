@@ -33,7 +33,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <a href="login.php" class="btn btn-outline btn-sm">Login</a>
         <?php endif; ?>
         <?php if ($currentPage !== 'register.php'): ?>
-          <a href="register.php" class="btn btn-primary btn-sm">Register</a>
+          <a href="register.php" class="btn btn-primary btn-sm">Sign Up</a>
         <?php endif; ?>
       </div>
 

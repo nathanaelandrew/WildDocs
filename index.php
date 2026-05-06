@@ -1,5 +1,5 @@
 <?php
-// landing_page.php — WildDocuments Public Landing Page
+// index.php — WildDocuments Public Landing Page
 // No session required; open to all visitors
 ?>
 <!DOCTYPE html>
@@ -74,8 +74,8 @@
       </p>
 
       <div class="hero__actions fade-up delay-3">
-        <a href="register.php" class="btn btn-primary btn-xl">📄 &nbsp;Get Started</a>
-        <a href="login.php"    class="btn btn-outline  btn-xl">🔐 &nbsp;Sign In</a>
+        <a href="register.php" class="btn btn-primary btn-xl">📄 &nbsp;Request a Document</a>
+        <a href="#features"    class="btn btn-outline  btn-xl">🔐 &nbsp;Learn More</a>
       </div>
 
     </div>
@@ -217,8 +217,8 @@
     <h2>Ready to Request Your Documents?</h2>
     <p>Stop wasting time in line. Register now and get your documents faster than ever.</p>
     <div class="cta-banner__actions">
-      <a href="register.php" class="btn btn-primary btn-xl">📄 &nbsp;Get Started Now</a>
-      <a href="login.php"    class="btn btn-outline  btn-xl">🔐 &nbsp;Sign In</a>
+      <a href="register.php" class="btn btn-primary btn-xl">📄 &nbsp;Sign Up</a>
+      <a href="login.php"    class="btn btn-outline  btn-xl">🔐 &nbsp;Log In</a>
     </div>
   </div>
 </section>
