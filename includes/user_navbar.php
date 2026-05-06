@@ -2,7 +2,7 @@
 // includes/user_navbar.php — User top navbar (include only, NOT a full page)
 // Session is already started by the parent page — do NOT call session_start() here
 // Preview mode: $_SESSION['user_id'] is set by the parent page
-$userName = $_SESSION['user_name'] ?? 'Admin';
+$userName = $_SESSION['user_name'] ?? 'Student';
 $userInitial = strtoupper(substr($userName, 0, 1));
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>

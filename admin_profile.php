@@ -1,8 +1,12 @@
 <?php
-// admin_profile.php
-// TODO: session_start(); Admin auth check
+// 1. ALWAYS start the session at the absolute top
+session_start();
+
+// 2. Auth Check (Uncomment this for actual use)
+// if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
+
 // TODO: $admin = fetchAdminById($pdo, $_SESSION['admin_id']);
-// TODO: Handle POST profile update
+
 $admin = [
   'name'       => 'System Admin',
   'email'      => 'admin@wilddocs.edu.ph',
@@ -11,7 +15,8 @@ $admin = [
   'joined'     => 'January 10, 2024',
   'last_login' => 'May 5, 2026 – 9:14 AM',
 ];
-$initials = strtoupper(substr($admin['name'],0,1));
+
+$initials = strtoupper(substr($admin['name'], 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -19,14 +24,14 @@ $initials = strtoupper(substr($admin['name'],0,1));
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Profile – WildDocuments Admin</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<?php include 'partials/admin_navbar.php'; ?>
+<?php include 'includes/admin_navbar.php'; ?>
 
 <div class="app-layout">
-  <?php include 'partials/admin_sidebar.php'; ?>
+  <?php include 'includes/admin_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">
@@ -73,7 +78,6 @@ $initials = strtoupper(substr($admin['name'],0,1));
             <h3>Edit Profile</h3>
           </div>
           <div class="card__body">
-            <!-- TODO: POST to update_profile.php -->
             <form method="POST" action="update_profile.php">
               <div class="form-section">
                 <div class="form-section__title">Personal Information</div>
@@ -104,18 +108,18 @@ $initials = strtoupper(substr($admin['name'],0,1));
 
               <div style="display:flex;gap:10px">
                 <button type="submit" class="btn btn-primary">Save Changes</button>
-                <button type="reset"  class="btn btn-ghost">Reset</button>
+                <button type="reset" class="btn btn-ghost">Reset</button>
               </div>
             </form>
           </div>
         </div>
 
-      </div><!-- /grid -->
+      </div>
     </div>
   </main>
 </div>
 
-<?php include 'partials/admin_footer.php'; ?>
+<?php include 'includes/admin_footer.php'; ?>
 
 </body>
 </html>

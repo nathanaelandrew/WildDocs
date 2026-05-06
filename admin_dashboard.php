@@ -1,8 +1,11 @@
 <?php
 // admin_dashboard.php — WildDocuments Admin Dashboard
-// TODO: session_start(); Verify admin role before rendering
+session_start();
+// Uncomment when auth is wired:
 // if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-// TODO: $requests = fetchAllRequests($pdo); // fetch from DB
+// include 'includes/db.php';
+// $pdo = getDB();
+// $requests = fetchAllRequests($pdo);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -10,14 +13,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard – WildDocuments Admin</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<?php include 'partials/admin_navbar.php'; ?>
+<?php include 'includes/admin_navbar.php'; ?>
 
 <div class="app-layout">
-  <?php include 'partials/admin_sidebar.php'; ?>
+  <?php include 'includes/admin_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">
@@ -25,12 +28,10 @@
       <!-- Welcome Banner -->
       <div class="welcome-banner">
         <div>
-          <h2>Welcome, Admin!</h2>
+          <h2>Welcome, <?= htmlspecialchars($_SESSION['admin_name'] ?? 'Admin') ?>!</h2>
           <p>Here's an overview of all document requests in the system.</p>
         </div>
-        <a href="admin_new_request.php" class="btn btn-primary">
-          + New Request
-        </a>
+        <a href="admin_requests.php" class="btn btn-primary">View All Requests →</a>
       </div>
 
       <!-- Stat Cards -->
@@ -110,17 +111,14 @@
               </thead>
               <tbody>
                 <?php
-                // TODO: Replace with real DB loop:
-                // foreach ($requests as $row) { ... }
-
-                // --- SAMPLE DATA ---
+                // TODO: Replace with real DB loop: foreach ($requests as $row) { ... }
                 $sample = [
-                  ['Juan dela Cruz',    '2021-00123', 'BS Computer Science', 'Official Transcript',  '₱150', 'May 1, 2026', 'pending'],
-                  ['Maria Santos',      '2020-00456', 'BS Nursing',           'Diploma Copy',         '₱200', 'May 1, 2026', 'in_progress'],
-                  ['Carlos Reyes',      '2019-00789', 'BS Education',         'Certification Letter', '₱100', 'Apr 30, 2026','completed'],
-                  ['Ana Liza Mendoza',  '2022-00321', 'BS Accountancy',       'Academic Records',     '₱175', 'Apr 30, 2026','pending'],
-                  ['Ricky Villanueva',  '2021-00654', 'BS Engineering',       'Official Transcript',  '₱150', 'Apr 29, 2026','completed'],
-                  ['Sophia Laurel',     '2023-00987', 'BS Psychology',        'Certification Letter', '₱100', 'Apr 29, 2026','in_progress'],
+                  ['Juan dela Cruz',   '2021-00123', 'BS Computer Science', 'Official Transcript',  '₱150', 'May 1, 2026',  'pending'],
+                  ['Maria Santos',     '2020-00456', 'BS Nursing',           'Diploma Copy',         '₱200', 'May 1, 2026',  'in_progress'],
+                  ['Carlos Reyes',     '2019-00789', 'BS Education',         'Certification Letter', '₱100', 'Apr 30, 2026', 'completed'],
+                  ['Ana Liza Mendoza', '2022-00321', 'BS Accountancy',       'Academic Records',     '₱175', 'Apr 30, 2026', 'pending'],
+                  ['Ricky Villanueva', '2021-00654', 'BS Engineering',       'Official Transcript',  '₱150', 'Apr 29, 2026', 'completed'],
+                  ['Sophia Laurel',    '2023-00987', 'BS Psychology',        'Certification Letter', '₱100', 'Apr 29, 2026', 'in_progress'],
                 ];
                 $i = 1;
                 foreach ($sample as $row):
@@ -167,7 +165,7 @@
   </main>
 </div>
 
-<?php include 'partials/admin_footer.php'; ?>
+<?php include 'includes/admin_footer.php'; ?>
 
 <script>
 function updateStatus(select, rowId) {
@@ -175,7 +173,6 @@ function updateStatus(select, rowId) {
   const badge = row.querySelector('.badge');
   const val   = select.value;
 
-  // Update badge class & label
   badge.className = 'badge';
   const map = {
     pending:     ['badge-pending',  'Pending'],
@@ -186,7 +183,7 @@ function updateStatus(select, rowId) {
   badge.textContent = map[val][1];
 
   // TODO: AJAX POST to update_status.php
-  // fetch('update_status.php', { method:'POST', body: new FormData(/* {request_id, status} */) })
+  // fetch('update_status.php', { method: 'POST', body: JSON.stringify({ request_id: rowId, status: val }), headers: { 'Content-Type': 'application/json' } });
   console.log('Status updated → row', rowId, ':', val);
 }
 </script>
