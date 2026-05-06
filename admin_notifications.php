@@ -1,24 +1,8 @@
 <?php
-// 1. MUST be at the very top
-session_start();
-
-// 2. Uncomment this for security
-// if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-
+// admin_notifications.php
+// TODO: session_start(); Admin auth check
 // TODO: $notifications = fetchAdminNotifications($pdo, $_SESSION['admin_id']);
-
-$notifs = [
-    ['unread', '📋', 'New Request Submitted', 'Juan dela Cruz submitted a request for Official Transcript.', '2 mins ago'],
-    ['unread', '💳', 'Payment Confirmed', 'Maria Santos has completed payment for Diploma Copy (₱200).', '15 mins ago'],
-    ['unread', '📋', 'New Request Submitted', 'Ana Liza Mendoza submitted a request for Academic Records.', '42 mins ago'],
-    ['unread', '🔔', 'Request Due for Review', 'Carlos Reyes\'s Certification Letter request is pending for 3 days.', '1 hour ago'],
-    ['unread', '📋', 'New Request Submitted', 'Sophia Laurel submitted a request for Certification Letter.', '2 hours ago'],
-    ['read',   '✅', 'Request Completed', 'Ricky Villanueva\'s Official Transcript has been marked completed.', 'Yesterday'],
-    ['read',   '✅', 'Request Completed', 'Grace Aquino\'s Official Transcript has been marked completed.', 'Yesterday'],
-    ['read',   '⚙️', 'Status Updated', 'Patrick Lim\'s request status changed to In Progress.', '2 days ago'],
-    ['read',   '💳', 'Payment Confirmed', 'Miguel Torres completed payment for Diploma Copy (₱200).', '2 days ago'],
-    ['read',   '🔔', 'System Maintenance Scheduled', 'The system will be under maintenance on May 10, 2026 from 12–2 AM.', '3 days ago'],
-];
+// TODO: markAllAsRead($pdo, $_SESSION['admin_id']); // if ?action=read_all
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -26,14 +10,14 @@ $notifs = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notifications – WildDocuments Admin</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<?php include 'includes/admin_navbar.php'; ?>
+<?php include 'partials/admin_navbar.php'; ?>
 
 <div class="app-layout">
-  <?php include 'includes/admin_sidebar.php'; ?>
+  <?php include 'partials/admin_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">
@@ -60,7 +44,22 @@ $notifs = [
         </div>
 
         <div class="notif-list" id="notifList">
-          <?php foreach ($notifs as $n): 
+
+          <?php
+          // TODO: Replace with DB-driven notifications
+          $notifs = [
+            ['unread', '📋', 'New Request Submitted',        'Juan dela Cruz submitted a request for Official Transcript.',         '2 mins ago'],
+            ['unread', '💳', 'Payment Confirmed',            'Maria Santos has completed payment for Diploma Copy (₱200).',         '15 mins ago'],
+            ['unread', '📋', 'New Request Submitted',        'Ana Liza Mendoza submitted a request for Academic Records.',          '42 mins ago'],
+            ['unread', '🔔', 'Request Due for Review',       'Carlos Reyes\'s Certification Letter request is pending for 3 days.', '1 hour ago'],
+            ['unread', '📋', 'New Request Submitted',        'Sophia Laurel submitted a request for Certification Letter.',         '2 hours ago'],
+            ['read',   '✅', 'Request Completed',            'Ricky Villanueva\'s Official Transcript has been marked completed.',   'Yesterday'],
+            ['read',   '✅', 'Request Completed',            'Grace Aquino\'s Official Transcript has been marked completed.',      'Yesterday'],
+            ['read',   '⚙️', 'Status Updated',               'Patrick Lim\'s request status changed to In Progress.',              '2 days ago'],
+            ['read',   '💳', 'Payment Confirmed',            'Miguel Torres completed payment for Diploma Copy (₱200).',            '2 days ago'],
+            ['read',   '🔔', 'System Maintenance Scheduled', 'The system will be under maintenance on May 10, 2026 from 12–2 AM.',  '3 days ago'],
+          ];
+          foreach ($notifs as $n):
             $isUnread = $n[0] === 'unread';
           ?>
           <div class="notif-item <?= $isUnread ? 'unread' : '' ?>" data-read="<?= $n[0] ?>">
@@ -73,44 +72,41 @@ $notifs = [
             <div class="notif-item__time"><?= $n[4] ?></div>
           </div>
           <?php endforeach; ?>
-        </div>
+
+        </div><!-- /.notif-list -->
       </div>
 
     </div>
   </main>
 </div>
 
-<?php include 'includes/admin_footer.php'; ?>
+<?php include 'partials/admin_footer.php'; ?>
 
 <script>
-// JS logic is already solid
 function markAllRead() {
   document.querySelectorAll('.notif-item.unread').forEach(el => {
     el.classList.remove('unread');
     el.dataset.read = 'read';
     el.querySelector('.notif-item__dot').classList.add('read');
   });
+  // TODO: POST to mark_notifications_read.php
 }
 
 document.querySelectorAll('.notif-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.notif-tab').forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-ghost');
-    });
-    btn.classList.add('btn-primary');
-    btn.classList.remove('btn-ghost');
+    document.querySelectorAll('.notif-tab').forEach(b => b.classList.replace('btn-primary','btn-ghost'));
+    btn.classList.replace('btn-ghost','btn-primary');
 
     const filter = btn.dataset.filter;
     document.querySelectorAll('.notif-item').forEach(item => {
-      if (filter === 'all' || item.dataset.read === filter) {
-          item.style.display = '';
-      } else {
-          item.style.display = 'none';
-      }
+      if (filter === 'all')                         item.style.display = '';
+      else if (filter === 'unread' && item.dataset.read === 'unread') item.style.display = '';
+      else if (filter === 'read'   && item.dataset.read === 'read')   item.style.display = '';
+      else item.style.display = 'none';
     });
   });
 });
 </script>
+
 </body>
 </html>
