@@ -138,7 +138,7 @@ $rows = [
   </div>
 </div>
 
-<?php include 'includes/admin_footer.php'; ?>
+<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
 
 <script>
 // JS functions remain largely the same, but ensure statusMap matches your values

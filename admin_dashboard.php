@@ -1,17 +1,67 @@
 <?php
 // admin_dashboard.php
 session_start();
-include 'includes/db.php';
 
-// Check authentication based on your login system
-if (!isset($_SESSION['admin_id'])) { 
-    header('Location: login.php'); 
-    exit; 
-}
+// 1. MOCK SESSION (Since you aren't logged in)
+$_SESSION['admin_name'] = "Admin Preview";
 
-$pdo = getDB();
-$requests = fetchAllRequests($pdo);
-$stats = getDashboardStats($pdo);
+// 2. MOCK STATISTICS
+$stats = [
+    'total'       => 124,
+    'pending'     => 45,
+    'in_progress' => 12,
+    'completed'   => 67
+];
+
+// 3. MOCK REQUESTS DATA
+$requests = [
+    [
+        'id'            => 1001,
+        'full_name'     => 'Juan Dela Cruz',
+        'student_id'    => '2021-0001',
+        'program'       => 'BS IT',
+        'document_type' => 'Transcript of Records',
+        'amount'        => 250.00,
+        'created_at'    => '2023-10-20 09:30:00',
+        'status'        => 'pending'
+    ],
+    [
+        'id'            => 1002,
+        'full_name'     => 'Maria Clara',
+        'student_id'    => '2021-0042',
+        'program'       => 'BS CS',
+        'document_type' => 'Certificate of Enrollment',
+        'amount'        => 100.00,
+        'created_at'    => '2023-10-21 14:15:00',
+        'status'        => 'in_progress'
+    ],
+    [
+        'id'            => 1003,
+        'full_name'     => 'Crisostomo Ibarra',
+        'student_id'    => '2020-0123',
+        'program'       => 'BEED',
+        'document_type' => 'Diploma Copy',
+        'amount'        => 500.00,
+        'created_at'    => '2023-10-18 11:00:00',
+        'status'        => 'completed'
+    ],
+    [
+        'id'            => 1004,
+        'full_name'     => 'Leonor Rivera',
+        'student_id'    => '2022-0055',
+        'program'       => 'BS Accountancy',
+        'document_type' => 'Good Moral Certificate',
+        'amount'        => 75.00,
+        'created_at'    => '2023-10-22 08:45:00',
+        'status'        => 'pending'
+    ]
+];
+
+// Commenting these out so the page doesn't crash
+// include 'includes/db.php';
+// $pdo = getDB();
+// $requests = fetchAllRequests($pdo);
+// $stats = getDashboardStats($pdo);
 ?>
 
 <!DOCTYPE html>
@@ -20,27 +70,45 @@ $stats = getDashboardStats($pdo);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard – WildDocuments Admin</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <!-- NOTE: If your CSS file doesn't exist yet, the styling will be missing -->
+  <link rel="stylesheet" href="css/styles.css"> 
+  <style>
+    /* Adding some basic fallback styles in case your CSS isn't loading */
+    :root { --border: #ddd; --primary: #007bff; }
+    body { font-family: sans-serif; background: #f4f7f6; margin: 0; }
+    .app-layout { display: flex; min-height: 100vh; }
+    .main-content { flex: 1; padding: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .stat-card__value { font-size: 24px; font-weight: bold; }
+    .data-table { width: 100%; border-collapse: collapse; background: white; }
+    .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+    .badge-pending { background: #fff3cd; color: #856404; }
+    .badge-progress { background: #cce5ff; color: #004085; }
+    .badge-completed { background: #d4edda; color: #155724; }
+  </style>
 </head>
 <body>
 
-<?php include 'includes/admin_navbar.php'; ?>
+<?php 
+// Only include these if the files actually exist in your folder
+if (file_exists('includes/admin_navbar.php')) include 'includes/admin_navbar.php'; 
+?>
 
 <div class="app-layout">
-  <?php include 'includes/admin_sidebar.php'; ?>
+  <?php if (file_exists('includes/admin_sidebar.php')) include 'includes/admin_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">
 
-      <div class="welcome-banner">
+      <div class="welcome-banner" style="background: var(crimson-deeper); padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h2>Welcome, <?= htmlspecialchars($_SESSION['admin_name'] ?? 'Admin') ?>!</h2>
-          <p>Here's an overview of all document requests in the system.</p>
+          <h2 style="margin:0">Welcome, <?= htmlspecialchars($_SESSION['admin_name']) ?>!</h2>
+          <p style="margin:5px 0 0">Here's an overview of all document requests (PREVIEW MODE).</p>
         </div>
-        <a href="admin_requests.php" class="btn btn-primary">View All Requests →</a>
       </div>
 
-      <!-- Stat Cards with Real Data -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-card__icon">📋</div>
@@ -68,20 +136,12 @@ $stats = getDashboardStats($pdo);
         </div>
       </div>
 
-      <div class="card">
-        <div class="card__header">
-          <h3>Recent Requests</h3>
-          <a href="admin_requests.php" class="btn btn-ghost btn-sm">View All →</a>
+      <div class="card" style="background:white; border-radius:8px; overflow:hidden;">
+        <div class="card__header" style="padding: 20px; display:flex; justify-content:space-between; border-bottom:1px solid #eee">
+          <h3 style="margin:0">Recent Requests</h3>
         </div>
-        <div class="card__body" style="padding:0">
-            <!-- Search & Filter (UI only for now) -->
-          <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
-            <div class="filter-bar" style="margin:0">
-              <input type="text" class="form-control" placeholder="🔍 Search..." style="max-width:240px">
-            </div>
-          </div>
-
-          <div class="table-wrapper" style="border:none;border-radius:0">
+        <div class="card__body">
+          <div class="table-wrapper">
             <table class="data-table">
               <thead>
                 <tr>
@@ -116,7 +176,7 @@ $stats = getDashboardStats($pdo);
                   <td><?= date('M d, Y', strtotime($row['created_at'])) ?></td>
                   <td><span class="badge <?= $badgeClass ?>"><?= ucwords(str_replace('_', ' ', $status)) ?></span></td>
                   <td>
-                    <select class="status-select" onchange="updateStatus(this, <?= $row['id'] ?>)">
+                    <select class="status-select">
                       <option value="pending"     <?= $status==='pending' ? 'selected':'' ?>>Pending</option>
                       <option value="in_progress" <?= $status==='in_progress' ? 'selected':'' ?>>In Progress</option>
                       <option value="completed"   <?= $status==='completed' ? 'selected':'' ?>>Completed</option>
@@ -133,39 +193,18 @@ $stats = getDashboardStats($pdo);
   </main>
 </div>
 
-<?php include 'includes/admin_footer.php'; ?>
-
+<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
 <script>
-async function updateStatus(select, requestId) {
-  const badge = select.closest('tr').querySelector('.badge');
-  const newStatus = select.value;
-
-  try {
-    const response = await fetch('update_status.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `id=${requestId}&status=${newStatus}`
+  // JS to handle status change (this is just a placeholder, you would need to implement the actual update logic)
+  document.querySelectorAll('.status-select').forEach(select => {
+    select.addEventListener('change', function() {
+      const newStatus = this.value;
+      const row = this.closest('tr');
+      const id = row.querySelector('td').textContent; // Assuming ID is in the first cell
+      console.log(`Request ID ${id} status changed to ${newStatus}`);
+      // Here you would make an AJAX call to update the status in the database
     });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      // Update UI badge
-      badge.className = 'badge';
-      const map = {
-        pending:     ['badge-pending',  'Pending'],
-        in_progress: ['badge-progress', 'In Progress'],
-        completed:   ['badge-completed','Completed'],
-      };
-      badge.classList.add(map[newStatus][0]);
-      badge.textContent = map[newStatus][1];
-    } else {
-      alert('Failed to update status: ' + result.message);
-    }
-  } catch (error) {
-    console.error('Error:', error);
-  }
-}
-</script>
+  });
+
 </body>
 </html>

@@ -2,8 +2,8 @@
 // 1. Session start MUST be at the absolute top
 session_start();
 
-// 2. Admin Authentication check
-// if (!isset($_SESSION['admin_id'])) { 
+// 2. User Authentication check
+// if (!isset($_SESSION['user_id'])) { 
 //     header('Location: login.php'); 
 //     exit; 
 // }
@@ -21,7 +21,7 @@ $prefs = [
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings – WildDocuments Admin</title>
+  <title>Settings – WildDocuments User</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     /* Toggle Switch CSS */
@@ -44,10 +44,10 @@ $prefs = [
 </head>
 <body>
 
-<?php include 'includes/admin_navbar.php'; ?>
+<?php include 'includes/user_navbar.php'; ?>
 
 <div class="app-layout">
-  <?php include 'includes/admin_sidebar.php'; ?>
+  <?php include 'includes/user_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">
@@ -96,7 +96,7 @@ $prefs = [
             <h3>🔒 Security</h3>
           </div>
           <div class="card__body">
-            <p style="margin-bottom:18px;font-size:.85rem">Update your admin password to keep your account secure.</p>
+            <p style="margin-bottom:18px;font-size:.85rem">Update your user password to keep your account secure.</p>
 
             <form method="POST" action="change_password.php" onsubmit="return validatePwForm()">
               <div class="form-group">
@@ -121,7 +121,7 @@ $prefs = [
             <!-- Danger Zone -->
             <div style="background:var(--pink-bg);border:1px solid var(--pink-soft);border-radius:var(--radius);padding:16px">
               <div style="font-size:.85rem;font-weight:700;color:var(--crimson);margin-bottom:6px">⚠️ Danger Zone</div>
-              <p style="font-size:.82rem;margin-bottom:12px">Logging out will end your current admin session.</p>
+              <p style="font-size:.82rem;margin-bottom:12px">Logging out will end your current user session.</p>
               <a href="logout.php" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to log out?')">Logout Now</a>
             </div>
           </div>

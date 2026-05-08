@@ -119,7 +119,7 @@ $initials = strtoupper(substr($admin['name'], 0, 1));
   </main>
 </div>
 
-<?php include 'includes/admin_footer.php'; ?>
+<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
 
 </body>
 </html>

@@ -18,6 +18,8 @@ function userSidebarLink(string $href, string $icon, string $label, string $curr
   <div class="sidebar__section-label">Account</div>
 
   <?php userSidebarLink('user_profile.php',   '👤', 'My Profile',       $currentPage); ?>
+  <?php userSidebarLink('user_settings.php', '⚙️', 'Settings', $currentPage); ?>
+
 
   <!-- Logout pinned to bottom -->
   <div class="sidebar__bottom">
