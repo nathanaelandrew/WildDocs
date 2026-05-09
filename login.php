@@ -1,53 +1,72 @@
 <?php
-// login.php — WildDocuments Login (User & Admin)
+// login.php
 session_start();
-include 'includes/db.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
-    header('Location: user_dashboard.php'); exit;
-}
-if (isset($_SESSION['admin_id'])) {
-    header('Location: admin_dashboard.php'); exit;
+    $target = ($_SESSION['user_role'] === 'admin') ? 'admin_dashboard.php' : 'student_dashboard.php';
+    header("Location: $target");
+    exit;
 }
 
 $error = '';
+require_once 'includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $pdo = getDB();
-    $email    = trim($_POST['email']    ?? '');
-    $password = $_POST['password']      ?? '';
-    $role     = $_POST['role']          ?? 'user';
+    $email         = trim($_POST['email'] ?? '');
+    $password      = $_POST['password'] ?? '';
+    $roleSelected  = $_POST['role'] ?? 'student'; // Role from the UI tabs
 
     if (empty($email) || empty($password)) {
         $error = 'Please enter your email and password.';
     } else {
-        if ($role === 'admin') {
-            // Admin Authentication
-            $stmt = $pdo->prepare('SELECT * FROM admins WHERE email = ?');
-            $stmt->execute([$email]);
-            $admin = $stmt->fetch();
+        try {
+            $pdo = getDB();
 
-            if ($admin && password_verify($password, $admin['password_hash'])) {
-                $_SESSION['admin_id']   = $admin['id'];
-                $_SESSION['admin_name'] = $admin['first_name'];
-                header('Location: admin_dashboard.php'); 
-                exit;
+            if ($roleSelected === 'admin') {
+                // JOIN users with admins table
+                $stmt = $pdo->prepare('
+                    SELECT u.*, a.admin_id, a.admin_level 
+                    FROM users u
+                    JOIN admins a ON u.id = a.user_id
+                    WHERE u.email = ? AND u.role = \'admin\'
+                ');
+            } else {
+                // JOIN users with students table
+                $stmt = $pdo->prepare('
+                    SELECT u.*, s.student_id, s.student_number, s.program, s.year_level 
+                    FROM users u
+                    JOIN students s ON u.id = s.user_id
+                    WHERE u.email = ? AND u.role = \'student\'
+                ');
             }
-        } else {
-            // User (Student/Alumni) Authentication
-            $stmt = $pdo->prepare('SELECT * FROM users WHERE email = ?');
+
             $stmt->execute([$email]);
             $user = $stmt->fetch();
 
+            // Verify User exists and Password is correct
             if ($user && password_verify($password, $user['password_hash'])) {
+                
+                // Common Session Variables
                 $_SESSION['user_id']   = $user['id'];
+                $_SESSION['user_role'] = $user['role'];
                 $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
-                header('Location: user_dashboard.php'); 
+
+                if ($user['role'] === 'admin') {
+                    $_SESSION['admin_level'] = $user['admin_level'];
+                    header('Location: admin_dashboard.php');
+                } else {
+                    $_SESSION['student_number'] = $user['student_number'];
+                    $_SESSION['user_program']    = $user['program'];
+                    header('Location: student_dashboard.php');
+                }
                 exit;
+            } else {
+                $error = 'Invalid email or password for the selected role.';
             }
+        } catch (Exception $e) {
+            $error = 'Database error: ' . $e->getMessage();
         }
-        $error = 'Invalid email or password. Please try again.';
     }
 }
 ?>
@@ -59,131 +78,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <title>Login — WildDocuments</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
-    .auth-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-light); }
-    .auth-wrap {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 48px 16px;
-    }
-    .auth-card {
-      background: var(--white);
-      border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-md);
-      padding: 44px 48px;
-      width: 100%;
-      max-width: 440px;
-    }
-    .auth-card__header { text-align: center; margin-bottom: 32px; }
-    .auth-card__icon {
-      width: 56px; height: 56px;
-      background: var(--pink-bg);
-      border-radius: var(--radius-lg);
-      display: inline-flex; align-items: center; justify-content: center;
-      margin-bottom: 16px;
-    }
-    .auth-card__icon svg { width: 28px; height: 28px; }
-    .auth-card__title { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin-bottom: 6px; }
-    .auth-card__sub { font-size: .88rem; color: var(--text-muted); }
-
-    /* Role tabs */
-    .role-tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--border); }
-    .role-tab {
-      flex: 1; padding: 10px; text-align: center; cursor: pointer;
-      font-size: .85rem; font-weight: 600; color: var(--text-muted);
-      background: var(--white); border: none; transition: var(--transition);
-    }
-    .role-tab.active { background: var(--crimson); color: var(--white); }
-
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-dark); margin-bottom: 6px; }
-    .forgot-link { display: block; text-align: right; font-size: .8rem; color: var(--crimson); font-weight: 600; margin-top: -10px; margin-bottom: 20px; }
-    .auth-footer { text-align: center; margin-top: 20px; font-size: .85rem; color: var(--text-muted); }
-    .auth-footer a { color: var(--crimson); font-weight: 600; }
-    .alert { padding: 12px 16px; border-radius: var(--radius); margin-bottom: 20px; font-size: .88rem; background: #FDF0F2; border: 1px solid var(--pink-soft); color: var(--crimson-dark); }
-    @media (max-width: 500px) { .auth-card { padding: 28px 20px; } }
+    .auth-page{min-height:100vh;display:flex;flex-direction:column;background:var(--bg-light)}
+    .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 16px}
+    .auth-card{background:var(--white);border-radius:var(--radius-xl);box-shadow:var(--shadow-md);padding:44px 48px;width:100%;max-width:440px;border: 1px solid var(--border);}
+    .auth-card__header{text-align:center;margin-bottom:32px}
+    .auth-card__title{font-size:1.5rem;font-weight:700;color:var(--text-dark);margin-bottom:6px;font-family:'Poppins';}
+    .role-tabs{display:flex;margin-bottom:28px;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+    .role-tab{flex:1;padding:12px;text-align:center;cursor:pointer;font-size:.85rem;font-weight:600;color:var(--text-muted);background:var(--white);border:none;transition:all .2s;}
+    .role-tab.active{background:var(--crimson);color:#fff}
+    .form-group{margin-bottom:18px}
+    .form-group label{display:block;font-size:.82rem;font-weight:600;color:var(--text-dark);margin-bottom:6px}
+    .alert-error{padding:12px;background:#fef2f2;color:#991b1b;border-radius:8px;margin-bottom:20px;font-size:.88rem;border:1px solid #fee2e2;}
+    .auth-footer{text-align:center;margin-top:20px;font-size:.85rem;color:var(--text-muted)}
+    .auth-footer a{color:var(--crimson);font-weight:600}
   </style>
 </head>
 <body class="auth-page">
-
 <?php include 'includes/navbar.php'; ?>
 
 <div class="auth-wrap">
   <div class="auth-card">
-
     <div class="auth-card__header">
-      <div class="auth-card__icon">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <polyline points="14 2 14 8 20 8" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <line x1="16" y1="13" x2="8" y2="13" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round"/>
-          <line x1="16" y1="17" x2="8" y2="17" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
       <h2 class="auth-card__title">Welcome Back</h2>
       <p class="auth-card__sub">Sign in to WildDocuments</p>
     </div>
 
-    <!-- Role selector -->
-    <div class="role-tabs" id="roleTabs">
-      <button type="button" class="role-tab active" onclick="setRole('user')">🎓 Student / Alumni</button>
-      <button type="button" class="role-tab"        onclick="setRole('admin')">🔐 Administrator</button>
+    <!-- UI Tabs to select role -->
+    <div class="role-tabs">
+      <button type="button" class="role-tab active" id="tabStudent" onclick="setRole('student')">Student</button>
+      <button type="button" class="role-tab" id="tabAdmin" onclick="setRole('admin')">Administrator</button>
     </div>
 
     <?php if ($error): ?>
-      <div class="alert"><?= htmlspecialchars($error) ?></div>
+      <div class="alert-error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
     <form method="POST" action="login.php">
-      <input type="hidden" name="role" id="roleInput" value="<?= htmlspecialchars($_POST['role'] ?? 'user') ?>">
-
+      <!-- This hidden input changes based on the tab clicked -->
+      <input type="hidden" name="role" id="roleInput" value="student">
+      
       <div class="form-group">
-        <label for="email">Email Address</label>
-        <input type="email" id="email" name="email" class="form-control"
-               placeholder="yourname@university.edu.ph"
-               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required autofocus>
+        <label>Email Address</label>
+        <input type="email" name="email" class="form-control" placeholder="name@university.edu.ph" value="<?= htmlspecialchars($email ?? '') ?>" required>
       </div>
-
       <div class="form-group">
-        <label for="password">Password</label>
-        <input type="password" id="password" name="password" class="form-control"
-               placeholder="Enter your password" required>
+        <label>Password</label>
+        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
       </div>
-
-      <a href="forgot_password.php" class="forgot-link">Forgot password?</a>
-
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px">
-        Sign In
-      </button>
+      <button type="submit" class="btn btn-primary btn-block" style="padding:13px; font-weight:700;">Sign In</button>
     </form>
 
     <div class="auth-footer" id="authFooter">
       Don't have an account? <a href="register.php">Register here</a>
     </div>
-
   </div>
 </div>
-
-<?php include 'includes/footer.php'; ?>
 
 <script>
 function setRole(role) {
   document.getElementById('roleInput').value = role;
-  const tabs = document.querySelectorAll('.role-tab');
-  tabs[0].classList.toggle('active', role === 'user');
-  tabs[1].classList.toggle('active', role === 'admin');
-  // Hide register link for admin role
-  const footer = document.getElementById('authFooter');
-  footer.style.display = (role === 'admin') ? 'none' : '';
+  
+  // Update Tab visuals
+  document.getElementById('tabStudent').classList.toggle('active', role === 'student');
+  document.getElementById('tabAdmin').classList.toggle('active', role === 'admin');
+  
+  // Hide registration link for admins if desired
+  document.getElementById('authFooter').style.opacity = (role === 'admin') ? '0' : '1';
 }
-
-// Restore role state from POST
-(function() {
-  const savedRole = document.getElementById('roleInput').value;
-  if (savedRole === 'admin') setRole('admin');
-})();
 </script>
 
+<?php include 'includes/footer.php'; ?>
 </body>
 </html>

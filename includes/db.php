@@ -3,13 +3,13 @@
 
 function getDB() {
     // Get these from Supabase Project Settings -> Database -> Connection String (PHP)
-    $host     = 'db.your-project-id.supabase.co';
+    $host     = 'db.ynfkvcxdnsihgmneedeu.supabase.co';
     $port     = '5432';
     $dbname   = 'postgres';
     $user     = 'postgres';
-    $password = 'YOUR_SUPABASE_PASSWORD'; // Use the password you set when creating the project
+    $password = 'CSIT226InformationManagement'; // Use the password you set when creating the project
 
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;";
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
 
     try {
         $pdo = new PDO($dsn, $user, $password, [
@@ -24,23 +24,60 @@ function getDB() {
 
 // Fetch stats for the 4 top cards
 function getDashboardStats($pdo) {
-    $stats = ['total' => 0, 'pending' => 0, 'in_progress' => 0, 'completed' => 0];
+    // 1. Initialize ALL keys with 0 so they are never "undefined"
+    $stats = [
+        'total'    => 0, 
+        'pending'  => 0, 
+        'paid'     => 0, 
+        'approved' => 0, 
+        'released' => 0
+    ];
     
-    // In Postgres, we use GROUP BY to count statuses
-    $stmt = $pdo->query("SELECT status, COUNT(*) as count FROM requests GROUP BY status");
-    $results = $stmt->fetchAll();
-    
-    foreach ($results as $row) {
-        $stats['total'] += (int)$row['count'];
-        $stats[$row['status']] = (int)$row['count'];
+    try {
+        $stmt = $pdo->query("SELECT status, COUNT(*) as count FROM requests GROUP BY status");
+        $results = $stmt->fetchAll();
+        
+        foreach ($results as $row) {
+            $status = $row['status'];
+            $count  = (int)$row['count'];
+            
+            $stats['total'] += $count;
+            
+            // Only update if the status from DB matches one of our keys
+            if (array_key_exists($status, $stats)) {
+                $stats[$status] = $count;
+            }
+        }
+    } catch (PDOException $e) {
+        // Handle error or log it
     }
+
     return $stats;
 }
 
 // Fetch the list of requests
+// Fetch requests for the Admin Dashboard (with Student details)
 function fetchRecentRequests($pdo, $limit = 10) {
-    $stmt = $pdo->prepare("SELECT * FROM requests ORDER BY created_at DESC LIMIT :limit");
+    // We JOIN requests with users (for names) and students (for student_number and program)
+    $sql = "SELECT 
+                r.*, 
+                u.first_name, u.last_name, 
+                s.student_number, s.program
+            FROM requests r
+            JOIN users u ON r.user_id = u.id
+            LEFT JOIN students s ON u.id = s.user_id
+            ORDER BY r.created_at DESC 
+            LIMIT :limit";
+            
+    $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+// Fetch requests for a specific student
+function fetchStudentRequests($pdo, $user_id) {
+    $stmt = $pdo->prepare("SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$user_id]);
     return $stmt->fetchAll();
 }
