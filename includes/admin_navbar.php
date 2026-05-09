@@ -27,7 +27,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <div class="navbar__avatar"><?= htmlspecialchars($userInitial) ?></div>
           <span class="navbar__username"><?= htmlspecialchars($userName) ?></span>
         </div>
-        <a href="logout.php" class="btn btn-outline btn-sm" onclick="return confirm('Log out?')">Logout</a>
       </div>
 
     </div>

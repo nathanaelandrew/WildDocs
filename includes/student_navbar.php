@@ -1,16 +1,21 @@
 <?php
-// includes/user_navbar.php — User top navbar (include only, NOT a full page)
-// Session is already started by the parent page — do NOT call session_start() here
-// Preview mode: $_SESSION['user_id'] is set by the parent page
-$userName = $_SESSION['user_name'] ?? 'Student';
+// includes/user_navbar.php
+// Ensure session is active (some pages might forget session_start)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Get the name from the session. 
+// If it's empty, we check for 'user_name' which we set in login/register.
+$userName = $_SESSION['user_name'] ?? 'Student User';
 $userInitial = strtoupper(substr($userName, 0, 1));
-$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <nav class="navbar">
   <div class="container" style="max-width:100%;padding:0 24px">
     <div class="navbar__inner">
 
-      <a href="user_dashboard.php" class="navbar__logo">
+      <!-- FIXED: Link changed to student_dashboard.php -->
+      <a href="student_dashboard.php" class="navbar__logo">
         <div class="navbar__logo-icon">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -27,7 +32,6 @@ $currentPage = basename($_SERVER['PHP_SELF']);
           <div class="navbar__avatar"><?= htmlspecialchars($userInitial) ?></div>
           <span class="navbar__username"><?= htmlspecialchars($userName) ?></span>
         </div>
-        <a href="logout.php" class="btn btn-outline btn-sm" onclick="return confirm('Log out?')">Logout</a>
       </div>
 
     </div>

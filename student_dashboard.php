@@ -1,7 +1,7 @@
 <?php
 // student_dashboard.php
 session_start();
-// if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
+if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 require_once 'includes/db.php';
 
 $pdo      = getDB();
@@ -43,12 +43,28 @@ function statusLabel(string $status): string {
   <link rel="stylesheet" href="css/styles.css">
   <style>
     .badge-paid { background:#EFF6FF; color:#1D4ED8; }
+    /* Flex container to keep buttons aligned side-by-side */
+    .col-action { 
+        display: flex; 
+        gap: 8px; 
+        justify-content: center; 
+        align-items: center; 
+    }
+    #downloadToast {
+        position: fixed; bottom: 30px; right: 30px;
+        background: #1A6E3C; color: white;
+        padding: 16px 24px; border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        display: none; align-items: center; gap: 12px;
+        z-index: 1000; animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
   </style>
 </head>
 <body>
-<?php include 'includes/user_navbar.php'; ?>
+<?php include 'includes/student_navbar.php'; ?>
 <div class="app-layout">
-  <?php include 'includes/user_sidebar.php'; ?>
+  <?php include 'includes/student_sidebar.php'; ?>
   <main style="padding:40px 0 64px;flex:1;background:var(--bg-light);overflow-x:hidden">
     <div class="container">
 
@@ -57,7 +73,6 @@ function statusLabel(string $status): string {
           <h2>My Document Requests</h2>
           <p style="color:var(--text-muted);margin-top:4px">Track and manage your submitted requests.</p>
         </div>
-        <a href="student_request.php" class="btn btn-primary">+ New Request</a>
       </div>
 
       <!-- Stats -->
@@ -107,12 +122,13 @@ function statusLabel(string $status): string {
                   <th>Amount</th>
                   <th>Date Filed</th>
                   <th>Status</th>
+                  <th style="text-align:center">Action</th> 
                 </tr>
               </thead>
               <tbody>
                 <?php if (empty($requests)): ?>
-                  <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted)">
-                    No requests yet. <a href="student_request.php" style="color:var(--crimson);font-weight:600">Submit your first request →</a>
+                  <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted)">
+                    No requests yet.
                   </td></tr>
                 <?php else: ?>
                   <?php foreach ($requests as $i => $r): ?>
@@ -125,6 +141,26 @@ function statusLabel(string $status): string {
                     <td style="font-weight:600">₱<?= number_format($r['total_amount'], 2) ?></td>
                     <td class="col-id"><?= date('M j, Y', strtotime($r['created_at'])) ?></td>
                     <td><span class="badge <?= statusBadge($r['status']) ?>"><?= statusLabel($r['status']) ?></span></td>
+                    
+                    <!-- ACTION COLUMN -->
+                    <td class="col-action">
+                        <?php if ($r['status'] === 'released'): ?>
+                            <button class="btn btn-secondary btn-sm" onclick="triggerDownload('<?= htmlspecialchars($r['document_name']) ?>')">
+                                Download
+                            </button>
+                        <?php else: ?>
+                            <button class="btn btn-sm" style="opacity:0.4; cursor:not-allowed;" disabled>
+                                Download
+                            </button>
+                        <?php endif; ?>
+
+                        <!-- CANCEL BUTTON: Only visible if pending -->
+                        <?php if ($r['status'] === 'pending'): ?>
+                            <button class="btn btn-danger btn-sm" onclick="cancelRequest(<?= $r['id'] ?>, event)">
+                                Cancel
+                            </button>
+                        <?php endif; ?>
+                    </td>
                   </tr>
                   <?php endforeach; ?>
                 <?php endif; ?>
@@ -137,13 +173,72 @@ function statusLabel(string $status): string {
     </div>
   </main>
 </div>
+
+<!-- Custom Notification Popup -->
+<div id="downloadToast">
+    <span style="font-size: 1.5rem;">✅</span>
+    <div>
+        <strong style="display:block;">Download Started</strong>
+        <span id="toastMsg" style="font-size: 0.85rem; opacity: 0.9;">Your document is being saved.</span>
+    </div>
+</div>
+
+<script>
+/**
+ * 1. Download Document Simulation
+ */
+function triggerDownload(docName) {
+    const toast = document.getElementById('downloadToast');
+    const msg = document.getElementById('toastMsg');
+    
+    msg.innerText = docName + " has been downloaded successfully.";
+    toast.style.display = 'flex';
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.style.display = 'none';
+            toast.style.opacity = '1';
+        }, 500);
+    }, 4000);
+}
+
+/**
+ * 2. AJAX Request Cancellation
+ */
+function cancelRequest(requestId, event) {
+    if (confirm('Are you sure you want to cancel and delete this request? This cannot be undone.')) {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+
+        fetch('cancel_request.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id: requestId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Refresh page to recalculate card stats and update table
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
+        })
+        .catch(() => {
+            alert('A connection error occurred. Could not cancel request.');
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        });
+    }
+}
+</script>
+
 <?php include 'includes/footer.php'; ?>
 </body>
 </html>
-PHPEOF
-echo "student_dashboard.php done"
-Output
-
-student_dashboard.php done
-
-Write student_request.php

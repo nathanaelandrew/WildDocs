@@ -1,4 +1,15 @@
 <?php
+session_start();
+
+// Auth check: Only allow logged-in admins
+if (isset($_SESSION['user_id'])) {
+    $target = ($_SESSION['user_role'] === 'admin') ? 'admin_dashboard.php' : 'student_dashboard.php';
+    header("Location: $target");
+    exit;
+}
+
+?>
+<?php
 // index.php — WildDocuments Public Landing Page
 // No session required; open to all visitors
 ?>

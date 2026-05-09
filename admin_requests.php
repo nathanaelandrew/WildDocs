@@ -1,34 +1,74 @@
 <?php
-// 1. Session and Auth Check MUST be at the very top, before ANY HTML
+// admin_requests.php
 session_start();
+require_once 'includes/db.php';
 
-// if (!isset($_SESSION['admin_id'])) { 
-//     header('Location: login.php'); 
-//     exit; 
-// }
+// Auth check: Only allow logged-in admins
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') { 
+    header('Location: login.php'); 
+    exit; 
+}
 
-// TODO: $requests = fetchAllRequests($pdo);
+$pdo = getDB();
 
-$rows = [
-    [1,  'Juan dela Cruz',    '2021-00123', 'BS Computer Science', 'Official Transcript',  '₱150', 'May 1, 2026',  'pending'],
-    [2,  'Maria Santos',      '2020-00456', 'BS Nursing',           'Diploma Copy',         '₱200', 'May 1, 2026',  'in_progress'],
-    [3,  'Carlos Reyes',      '2019-00789', 'BS Education',         'Certification Letter', '₱100', 'Apr 30, 2026', 'completed'],
-    [4,  'Ana Liza Mendoza',  '2022-00321', 'BS Accountancy',       'Academic Records',     '₱175', 'Apr 30, 2026', 'pending'],
-    [5,  'Ricky Villanueva',  '2021-00654', 'BS Engineering',       'Official Transcript',  '₱150', 'Apr 29, 2026', 'completed'],
-    [6,  'Sophia Laurel',     '2023-00987', 'BS Psychology',        'Certification Letter', '₱100', 'Apr 29, 2026', 'in_progress'],
-    [7,  'Miguel Torres',     '2020-00111', 'BS Chemistry',         'Diploma Copy',         '₱200', 'Apr 28, 2026', 'pending'],
-    [8,  'Grace Aquino',      '2022-00555', 'BS Architecture',      'Official Transcript',  '₱150', 'Apr 28, 2026', 'completed'],
-    [9,  'Patrick Lim',       '2021-00888', 'BS Information Tech',  'Academic Records',     '₱175', 'Apr 27, 2026', 'pending'],
-    [10, 'Carla Bautista',    '2019-00222', 'BS Social Work',       'Certification Letter', '₱100', 'Apr 27, 2026', 'in_progress'],
-];
+// --- 1. HANDLE FILTERS & SEARCH ---
+$search = trim($_GET['search'] ?? '');
+$filterStatus = $_GET['status'] ?? '';
+
+// Build the SQL Query dynamically based on filters
+$sql = "SELECT r.*, u.first_name, u.last_name, s.student_number, s.program, s.year_level
+        FROM requests r
+        JOIN users u ON r.user_id = u.id
+        LEFT JOIN students s ON u.id = s.user_id
+        WHERE 1=1"; // Placeholder to allow adding AND conditions
+
+$params = [];
+
+if (!empty($search)) {
+    $sql .= " AND (r.reference_number ILIKE ? OR u.first_name ILIKE ? OR u.last_name ILIKE ? OR s.student_number ILIKE ?)";
+    $searchTerm = "%$search%";
+    $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+}
+
+if (!empty($filterStatus)) {
+    $sql .= " AND r.status = ?";
+    $params[] = $filterStatus;
+}
+
+$sql .= " ORDER BY r.created_at DESC LIMIT 100";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$requests = $stmt->fetchAll();
+
+// Helper for status badge colors
+function getStatusBadgeClass($status) {
+    return match($status) {
+        'pending'  => 'badge-pending',
+        'paid'     => 'badge-paid',
+        'approved' => 'badge-progress',
+        'released' => 'badge-completed',
+        default    => 'badge-pending',
+    };
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>All Request – WildDocuments Admin</title>
+  <title>Manage All Requests – WildDocuments Admin</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .col-actions { display: flex; gap: 8px; justify-content: center; align-items: center; }
+    .modal-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    .modal-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 3px; }
+    .modal-value { font-weight: 600; color: var(--text-dark); }
+    .badge-paid { background:#EFF6FF; color:#1D4ED8; }
+    
+    /* Ensure filter bar looks clean */
+    .filter-card { margin-bottom: 20px; background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
+  </style>
 </head>
 <body>
 
@@ -37,136 +77,155 @@ $rows = [
 <div class="app-layout">
   <?php include 'includes/admin_sidebar.php'; ?>
 
-  <main class="main-content">
+  <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 80px;">
     <div class="dashboard-page">
 
       <div class="page-title-row">
         <div>
-          <h2>My Request</h2>
-          <p>Manage and update all incoming document requests.</p>
+          <h2>Manage All Requests</h2>
+          <p>Review and process the complete database of document applications.</p>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Export</button>
-        </div>
+        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Export List</button>
       </div>
 
-      <!-- Filter Bar -->
-      <div class="card" style="margin-bottom:20px">
+      <!-- --- 2. SEARCH AND FILTER BAR --- -->
+      <div class="filter-card">
         <div class="card__body" style="padding:16px 20px">
-          <div class="filter-bar" style="margin:0">
-            <input type="text" class="form-control" placeholder="🔍 Search..." style="max-width:260px;flex:1">
-            <select class="form-control" style="max-width:155px">
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <button class="btn btn-primary btn-sm">Filter</button>
-          </div>
+          <form method="GET" style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
+            <div style="flex: 0 1 450px; min-width: 300px;">
+                <input type="text" 
+                      name="search" 
+                      class="form-control" 
+                      placeholder="Search by Reference, Name, or ID..." 
+                      value="<?= htmlspecialchars($search) ?>">
+            </div>
+            <div style="width: 180px;">
+                <select name="status" class="form-control">
+                  <option value="">All Statuses</option>
+                  <option value="pending"  <?= $filterStatus === 'pending' ? 'selected':'' ?>>Pending</option>
+                  <option value="paid"     <?= $filterStatus === 'paid' ? 'selected':'' ?>>Paid</option>
+                  <option value="approved" <?= $filterStatus === 'approved' ? 'selected':'' ?>>Approved</option>
+                  <option value="released" <?= $filterStatus === 'released' ? 'selected':'' ?>>Released</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <?php if(!empty($search) || !empty($filterStatus)): ?>
+                <a href="admin_requests.php" class="btn btn-ghost">Clear</a>
+            <?php endif; ?>
+          </form>
         </div>
       </div>
 
-      <!-- Table -->
+      <!-- Requests Table -->
       <div class="card">
         <div class="card__header">
-          <h3>All Requests <span style="font-size:.8rem;font-weight:400;color:var(--text-muted)">(128 total)</span></h3>
+          <h3>Requests Database <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted); margin-left: 8px;">(Found <?= count($requests) ?> results)</span></h3>
         </div>
         <div class="card__body" style="padding:0">
-          <div class="table-wrapper" style="border:none;border-radius:0">
+          <div class="table-wrapper" style="border:none">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Full Name</th>
-                  <th>Student ID</th>
+                  <th>Ref #</th>
+                  <th>Student Name</th>
                   <th>Program</th>
-                  <th>Document Requested</th>
-                  <th>Amount</th>
-                  <th>Date Submitted</th>
+                  <th>Document</th>
+                  <th>Date</th>
                   <th>Status</th>
-                  <th>Update Status</th>
-                  <th>Details</th>
+                  <th style="text-align:center">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <?php foreach ($rows as $r): 
-                  $bc = match($r[7]) { 'pending'=>'badge-pending','in_progress'=>'badge-progress','completed'=>'badge-completed', default=>'badge-pending' };
-                  $bl = match($r[7]) { 'pending'=>'Pending','in_progress'=>'In Progress','completed'=>'Completed', default=>'Unknown' };
-                ?>
-                <tr id="row-<?= $r[0] ?>">
-                  <td class="col-id"><?= $r[0] ?></td>
-                  <td class="col-name"><?= htmlspecialchars($r[1]) ?></td>
-                  <td class="col-id"><?= $r[2] ?></td>
-                  <td><?= htmlspecialchars($r[3]) ?></td>
-                  <td><?= htmlspecialchars($r[4]) ?></td>
-                  <td style="font-weight:600"><?= $r[5] ?></td>
-                  <td class="col-id"><?= $r[6] ?></td>
-                  <td><span class="badge <?= $bc ?>" id="badge-<?= $r[0] ?>"><?= $bl ?></span></td>
-                  <td>
-                    <select class="status-select" onchange="updateStatus(this, <?= $r[0] ?>)">
-                      <option value="pending" <?= $r[7]==='pending' ? 'selected':'' ?>>Pending</option>
-                      <option value="in_progress" <?= $r[7]==='in_progress' ? 'selected':'' ?>>In Progress</option>
-                      <option value="completed" <?= $r[7]==='completed' ? 'selected':'' ?>>Completed</option>
-                    </select>
-                  </td>
-                  <td>
-                    <button class="btn btn-ghost btn-sm" onclick="viewDetails(<?= $r[0] ?>)" title="View Details">👁</button>
-                  </td>
-                </tr>
-                <?php endforeach; ?>
+                <?php if (empty($requests)): ?>
+                  <tr><td colspan="7" style="text-align:center; padding:50px; color:var(--text-muted)">No matching records found.</td></tr>
+                <?php else: ?>
+                  <?php foreach ($requests as $r): ?>
+                  <tr>
+                    <td style="font-weight:700; color:var(--crimson)"><?= htmlspecialchars($r['reference_number']) ?></td>
+                    <td>
+                        <div style="font-weight:600"><?= htmlspecialchars($r['first_name'].' '.$r['last_name']) ?></div>
+                        <div style="font-size:0.75rem; color:var(--text-muted)"><?= htmlspecialchars($r['student_number'] ?? 'N/A') ?></div>
+                    </td>
+                    <td style="font-size:.85rem"><?= htmlspecialchars($r['program']) ?></td>
+                    <td style="font-weight:500"><?= htmlspecialchars($r['document_name']) ?></td>
+                    <td style="font-size:.85rem"><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
+                    <td><span class="badge <?= getStatusBadgeClass($r['status']) ?>"><?= ucfirst($r['status']) ?></span></td>
+                    <td class="col-actions">
+                        <select class="status-select" onchange="updateStatus(<?= $r['id'] ?>, this.value, event)">
+                          <option value="pending"  <?= $r['status'] === 'pending' ? 'selected':'' ?>>Pending</option>
+                          <option value="paid"     <?= $r['status'] === 'paid' ? 'selected':'' ?>>Paid</option>
+                          <option value="approved" <?= $r['status'] === 'approved' ? 'selected':'' ?>>Approved</option>
+                          <option value="released" <?= $r['status'] === 'released' ? 'selected':'' ?>>Released</option>
+                        </select>
+                        <button class="btn btn-ghost btn-sm" onclick='viewDetails(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8") ?>)'>Details</button>
+                    </td>
+                  </tr>
+                  <?php endforeach; ?>
+                <?php endif; ?>
               </tbody>
             </table>
           </div>
         </div>
       </div>
-
     </div>
   </main>
 </div>
 
-<!-- Modal -->
-<div class="modal-overlay" id="detailModal">
-  <div class="modal" style="max-width:460px;text-align:left">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-      <h3 style="font-size:1.05rem">Request Details</h3>
-      <button onclick="closeModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;">×</button>
+<!-- Request Details Modal -->
+<div class="modal-overlay" id="detailsModal">
+    <div class="modal" style="max-width: 500px; text-align: left;">
+        <h3 id="modalRef" style="color: var(--crimson); margin-bottom: 5px;">Ref #</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Detailed Request Information</p>
+        <div class="modal-info-grid">
+            <div><span class="modal-label">Student Name</span><div id="modalName" class="modal-value">-</div></div>
+            <div><span class="modal-label">Student ID</span><div id="modalID" class="modal-value">-</div></div>
+            <div><span class="modal-label">Program & Year</span><div id="modalProgram" class="modal-value">-</div></div>
+            <div><span class="modal-label">Document Requested</span><div id="modalDoc" class="modal-value">-</div></div>
+            <div><span class="modal-label">Total Fee</span><div id="modalAmount" class="modal-value">-</div></div>
+            <div><span class="modal-label">Current Status</span><div id="modalStatus" class="modal-value">-</div></div>
+        </div>
+        <div style="background: var(--pink-bg); padding: 15px; border-radius: 8px; border-left: 4px solid var(--crimson);">
+            <span class="modal-label">Purpose of Request</span>
+            <div id="modalPurpose" style="font-style: italic; color: var(--text-mid); font-size: 0.9rem; line-height:1.4">-</div>
+        </div>
+        <div style="margin-top: 25px; text-align: right;">
+            <button class="btn btn-primary" onclick="closeModal()">Close Details</button>
+        </div>
     </div>
-    <div id="modalContent"></div>
-    <div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Close</button>
-    </div>
-  </div>
 </div>
 
-<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
-
 <script>
-// JS functions remain largely the same, but ensure statusMap matches your values
-const statusMap = {
-  pending: ['badge-pending', 'Pending'],
-  in_progress: ['badge-progress', 'In Progress'],
-  completed: ['badge-completed', 'Completed'],
-};
-
-function updateStatus(select, id) {
-  const val = select.value;
-  const badge = document.getElementById('badge-' + id);
-  if(badge && statusMap[val]) {
-    badge.className = 'badge ' + statusMap[val][0];
-    badge.textContent = statusMap[val][1];
-  }
+function viewDetails(request) {
+    document.getElementById('modalRef').innerText = 'Ref: ' + request.reference_number;
+    document.getElementById('modalName').innerText = request.first_name + ' ' + request.last_name;
+    document.getElementById('modalID').innerText = request.student_number || 'N/A';
+    document.getElementById('modalProgram').innerText = request.program + '\n(Year ' + (request.year_level || 'N/A') + ')';
+    document.getElementById('modalDoc').innerText = request.document_name;
+    document.getElementById('modalAmount').innerText = '₱' + parseFloat(request.total_amount).toLocaleString();
+    document.getElementById('modalStatus').innerText = request.status.toUpperCase();
+    document.getElementById('modalPurpose').innerText = request.purpose || 'No purpose specified.';
+    document.getElementById('detailsModal').classList.add('open');
 }
 
-function viewDetails(id) {
-  // Mock data for demonstration
-  const d = { name:'Juan dela Cruz', student_id:'2021-00123', program:'BS CS', document:'Transcript', amount:'₱150', date:'May 1', notes:'Job application' };
-  document.getElementById('modalContent').innerHTML = `<strong>Name:</strong> ${d.name}<br><strong>ID:</strong> ${d.student_id}`;
-  document.getElementById('detailModal').classList.add('open');
+function closeModal() { document.getElementById('detailsModal').classList.remove('open'); }
+
+function updateStatus(requestId, newStatus, event) {
+    const select = event.target;
+    select.disabled = true;
+    select.style.opacity = '0.5';
+    fetch('update_status.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: requestId, status: newStatus })
+    })
+    .then(response => response.json())
+    .then(data => { if (data.success) location.reload(); else alert('Error: ' + data.message); })
+    .catch(() => alert('Network error.'));
 }
 
-function closeModal() {
-  document.getElementById('detailModal').classList.remove('open');
-}
+window.onclick = function(event) { if (event.target == document.getElementById('detailsModal')) closeModal(); }
 </script>
+
+<?php include 'includes/footer.php'; ?>
 </body>
 </html>

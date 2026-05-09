@@ -13,7 +13,7 @@ function sidebarLink(string $href, string $icon, string $label, string $current)
   <div class="sidebar__section-label">Main Menu</div>
 
   <?php sidebarLink('admin_dashboard.php',     '🏠', 'Overview',      $currentPage); ?>
-  <?php sidebarLink('admin_requests.php',      '📋', 'All Requests',  $currentPage); ?>
+  <?php sidebarLink('admin_requests.php',      '📋', 'Manage Requests',  $currentPage); ?>
   <?php sidebarLink('admin_notifications.php', '🔔', 'Notifications', $currentPage); ?>
 
   <div class="sidebar__divider"></div>

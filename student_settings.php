@@ -44,10 +44,10 @@ $prefs = [
 </head>
 <body>
 
-<?php include 'includes/user_navbar.php'; ?>
+<?php include 'includes/student_navbar.php'; ?>
 
 <div class="app-layout">
-  <?php include 'includes/user_sidebar.php'; ?>
+  <?php include 'includes/student_sidebar.php'; ?>
 
   <main class="main-content">
     <div class="dashboard-page">

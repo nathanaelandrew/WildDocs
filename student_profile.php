@@ -103,11 +103,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 
 <?php 
-if (file_exists('includes/user_navbar.php')) include 'includes/user_navbar.php'; 
+if (file_exists('includes/student_navbar.php')) include 'includes/student_navbar.php'; 
 ?>
 
 <div class="app-layout">
-    <?php if (file_exists('includes/user_sidebar.php')) include 'includes/user_sidebar.php'; ?>
+    <?php if (file_exists('includes/student_sidebar.php')) include 'includes/student_sidebar.php'; ?>
 
     <main style="padding: 40px 0 64px; flex: 1; background: var(--bg-light); overflow-x: hidden;">
         <div class="container">

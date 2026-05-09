@@ -11,11 +11,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 
 $pdo = getDB();
 
-// 1. Fetch Stats for the cards
+// Fetch Unviewed count for the "New" badge
+$unviewedCount = getUnviewedCount($pdo);
+
+// Fetch Stats for the cards
 $stats = getDashboardStats($pdo);
 
-// 2. Fetch Requests with JOINs (Student Name, ID, and Program)
-$requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
+// Fetch Requests with JOINs (Student Name, ID, and Program)
+$requests = fetchRecentRequests($pdo, 20); 
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -24,6 +27,17 @@ $requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — WildDocuments</title>
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Make rows look interactive */
+        .clickable-row {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .clickable-row:hover {
+            background-color: var(--pink-bg) !important;
+        }
+        .badge-paid { background:#EFF6FF; color:#1D4ED8; }
+    </style>
 </head>
 <body>
 <?php include 'includes/admin_navbar.php'; ?>
@@ -31,14 +45,14 @@ $requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
 <div class="app-layout">
     <?php include 'includes/admin_sidebar.php'; ?>
     
-    <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 50px;">
+    <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 80px;">
         <div class="dashboard-page">
             
             <!-- Welcome Header -->
             <div class="welcome-banner" style="margin-bottom: 28px;">
                 <div>
                     <h2 style="color: white; margin-bottom: 5px;">Administrator Dashboard</h2>
-                    <p style="color: rgba(255,255,255,0.7); margin: 0;">Welcome back, <?= htmlspecialchars($_SESSION['user_name']) ?>. Manage all university document requests here.</p>
+                    <p style="color: rgba(255,255,255,0.7); margin: 0;">Welcome back, <?= htmlspecialchars($_SESSION['user_name']) ?>. Click any request to manage it.</p>
                 </div>
             </div>
 
@@ -59,7 +73,7 @@ $requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
                 <div class="stat-card">
                     <div class="stat-card__icon">💳</div>
                     <div class="stat-card__label">Paid/Approved</div>
-                    <div class="stat-card__value" style="color: #1e40af;"><?= $stats['paid'] + $stats['approved'] ?></div>
+                    <div class="stat-card__value" style="color: #1e40af;"><?= ($stats['paid'] ?? 0) + ($stats['approved'] ?? 0) ?></div>
                     <div class="stat-card__sub">In processing</div>
                 </div>
                 <div class="stat-card">
@@ -73,55 +87,58 @@ $requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
             <!-- Recent Requests Table -->
             <div class="card" style="margin-top: 28px;">
                 <div class="card__header">
-                    <h3>Recent Document Requests</h3>
-                    <div class="badge badge-new"><?= count($requests) ?> Recent</div>
+                    <div style="display:flex; align-items:center; gap:12px">
+                        <h3 style="margin:0">Recent Document Requests</h3>
+                        <?php if ($unviewedCount > 0): ?>
+                            <span class="badge badge-new"><?= $unviewedCount ?> New</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="card__body" style="padding: 0;">
-                    <div class="table-wrapper">
+                    <div class="table-wrapper" style="border:none">
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Ref #</th>
                                     <th>Student Name</th>
-                                    <th>Student ID</th>
                                     <th>Program</th>
                                     <th>Document</th>
-                                    <th>Amount</th>
+                                    <th>Date Submitted</th>
                                     <th>Status</th>
-                                    <th>Update Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($requests)): ?>
                                     <tr>
-                                        <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">No requests found in the system.</td>
+                                        <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">No requests found in the system.</td>
                                     </tr>
                                 <?php else: ?>
                                     <?php foreach ($requests as $r): 
+                                        // Highlight unviewed rows with a slight gold tint
+                                        $rowBg = (!$r['is_viewed']) ? '#FFF9F0' : '#FFFFFF';
+                                        
                                         $statusClass = match($r['status']) {
                                             'pending'  => 'badge-pending',
-                                            'paid'     => 'badge-progress', // Blueish
-                                            'approved' => 'badge-progress', // Blueish
+                                            'paid'     => 'badge-paid',
+                                            'approved' => 'badge-progress',
                                             'released' => 'badge-completed',
                                             default    => 'badge-pending'
                                         };
                                     ?>
-                                    <tr>
+                                    <tr class="clickable-row" 
+                                        style="background-color: <?= $rowBg ?>;"
+                                        onclick="window.location.href='admin_requests.php?search=<?= urlencode($r['reference_number']) ?>'"
+                                        title="Click to view details and update status">
+                                        
                                         <td style="font-weight: 700; color: var(--crimson);"><?= htmlspecialchars($r['reference_number']) ?></td>
-                                        <td class="col-name"><?= htmlspecialchars($r['first_name'] . ' ' . $r['last_name']) ?></td>
-                                        <td style="font-size: 0.8rem;"><?= htmlspecialchars($r['student_number'] ?? 'N/A') ?></td>
-                                        <td style="font-size: 0.8rem;"><?= htmlspecialchars($r['program'] ?? 'N/A') ?></td>
-                                        <td><?= htmlspecialchars($r['document_name']) ?></td>
-                                        <td style="font-weight: 600;">₱<?= number_format($r['total_amount'], 2) ?></td>
-                                        <td><span class="badge <?= $statusClass ?>"><?= ucfirst($r['status']) ?></span></td>
                                         <td>
-                                            <select class="status-select" onchange="updateStatus(<?= $r['id'] ?>, this.value)">
-                                                <option value="pending"  <?= $r['status'] === 'pending' ? 'selected':'' ?>>Pending</option>
-                                                <option value="paid"     <?= $r['status'] === 'paid' ? 'selected':'' ?>>Paid</option>
-                                                <option value="approved" <?= $r['status'] === 'approved' ? 'selected':'' ?>>Approved</option>
-                                                <option value="released" <?= $r['status'] === 'released' ? 'selected':'' ?>>Released</option>
-                                            </select>
+                                            <div class="col-name"><?= htmlspecialchars($r['first_name'] . ' ' . $r['last_name']) ?></div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted);"><?= htmlspecialchars($r['student_number'] ?? 'No ID') ?></div>
                                         </td>
+                                        <td style="font-size: 0.8rem;"><?= htmlspecialchars($r['program']) ?></td>
+                                        <td style="font-size: 0.85rem; font-weight:500"><?= htmlspecialchars($r['document_name']) ?></td>
+                                        <td style="font-size: 0.8rem;"><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
+                                        <td><span class="badge <?= $statusClass ?>"><?= ucfirst($r['status']) ?></span></td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
@@ -130,23 +147,12 @@ $requests = fetchRecentRequests($pdo, 20); // Fetch last 20 requests
                     </div>
                 </div>
             </div>
-
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="admin_requests.php" class="btn btn-ghost">View All Requests →</a>
+            </div>
         </div>
     </main>
 </div>
-
-<script>
-function updateStatus(requestId, newStatus) {
-    // This is where you would call an AJAX script to update the database
-    // For now, it will just show an alert
-    if(confirm('Change status to ' + newStatus.toUpperCase() + '?')) {
-        // You would typically use fetch() here:
-        // fetch('update_request.php', { method: 'POST', body: ... })
-        alert('Status updated for Request ID: ' + requestId);
-        location.reload(); // Refresh to see changes
-    }
-}
-</script>
 
 <?php include 'includes/footer.php'; ?>
 </body>

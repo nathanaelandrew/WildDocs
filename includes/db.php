@@ -62,7 +62,7 @@ function fetchRecentRequests($pdo, $limit = 10) {
     $sql = "SELECT 
                 r.*, 
                 u.first_name, u.last_name, 
-                s.student_number, s.program
+                s.student_number, s.program, s.year_level
             FROM requests r
             JOIN users u ON r.user_id = u.id
             LEFT JOIN students s ON u.id = s.user_id
@@ -80,4 +80,9 @@ function fetchStudentRequests($pdo, $user_id) {
     $stmt = $pdo->prepare("SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC");
     $stmt->execute([$user_id]);
     return $stmt->fetchAll();
+}
+
+function getUnviewedCount($pdo) {
+    $stmt = $pdo->query("SELECT COUNT(*) FROM requests WHERE is_viewed = FALSE");
+    return $stmt->fetchColumn();
 }
