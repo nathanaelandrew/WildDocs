@@ -1,9 +1,9 @@
 <?php
 // register.php — WildDocuments User Registration
 session_start();
+include 'includes/db.php'; // Ensure this is included
 
-// Redirect guard: Only redirect if they are already logged in 
-// AND this isn't the page load where they JUST registered.
+// Redirect guard
 if (isset($_SESSION['user_id']) && !isset($_GET['registered'])) {
     header('Location: user_dashboard.php');
     exit;
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $confirmPwd = $_POST['confirm_password'] ?? '';
     $agreeTerms = $_POST['agree_terms']      ?? '';
 
-    // Validation
+    // 1. Validation
     if (empty($firstName))  $errors[] = 'First name is required.';
     if (empty($lastName))   $errors[] = 'Last name is required.';
     if (empty($studentId))  $errors[] = 'Student ID is required.';
@@ -33,14 +33,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($agreeTerms)) $errors[] = 'You must agree to the Terms & Conditions.';
 
     if (empty($errors)) {
-        // --- DATABASE INSERT WOULD GO HERE ---
-        
-        // 1. Log them in automatically (Set Session)
-        $_SESSION['user_id'] = 101; 
-        $_SESSION['user_name'] = $firstName . ' ' . $lastName;
-        
-        // 2. Set success to true to show the Success Card
-        $success = true;
+        $pdo = getDB();
+
+        // 2. Check if email already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) {
+            $errors[] = 'This email is already registered.';
+        } else {
+            // 3. Hash password and Insert
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            try {
+                $sql = "INSERT INTO users (first_name, last_name, student_id, program, email, password_hash) 
+                        VALUES (?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$firstName, $lastName, $studentId, $program, $email, $hashedPassword]);
+
+                // 4. Get the last inserted ID (Supabase/Postgres compatible)
+                $userId = $pdo->lastInsertId();
+
+                // 5. Log them in automatically
+                $_SESSION['user_id'] = $userId; 
+                $_SESSION['user_name'] = $firstName . ' ' . $lastName;
+                
+                $success = true;
+            } catch (PDOException $e) {
+                $errors[] = "Registration failed. Please try again later.";
+                // For debugging: $errors[] = $e->getMessage(); 
+            }
+        }
     }
 }
 

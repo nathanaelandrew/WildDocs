@@ -1,18 +1,20 @@
 <?php
 // login.php — WildDocuments Login (User & Admin)
 session_start();
+include 'includes/db.php';
 
-// if (isset($_SESSION['user_id'])) {
-//     header('Location: user_dashboard.php'); exit;
-// }
-// if (isset($_SESSION['admin_id'])) {
-//     header('Location: admin_dashboard.php'); exit;
-// }
+// Redirect if already logged in
+if (isset($_SESSION['user_id'])) {
+    header('Location: user_dashboard.php'); exit;
+}
+if (isset($_SESSION['admin_id'])) {
+    header('Location: admin_dashboard.php'); exit;
+}
 
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // TODO: include 'includes/db.php'; $pdo = getDB();
+    $pdo = getDB();
     $email    = trim($_POST['email']    ?? '');
     $password = $_POST['password']      ?? '';
     $role     = $_POST['role']          ?? 'user';
@@ -20,26 +22,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Please enter your email and password.';
     } else {
-        // TODO: Real DB lookup
-        // if ($role === 'admin') {
-        //     $stmt = $pdo->prepare('SELECT * FROM admins WHERE email = ?');
-        //     $stmt->execute([$email]);
-        //     $admin = $stmt->fetch();
-        //     if ($admin && password_verify($password, $admin['password_hash'])) {
-        //         $_SESSION['admin_id']   = $admin['id'];
-        //         $_SESSION['admin_name'] = $admin['first_name'];
-        //         header('Location: admin_dashboard.php'); exit;
-        //     }
-        // } else {
-        //     $stmt = $pdo->prepare('SELECT * FROM users WHERE email = ?');
-        //     $stmt->execute([$email]);
-        //     $user = $stmt->fetch();
-        //     if ($user && password_verify($password, $user['password_hash'])) {
-        //         $_SESSION['user_id']   = $user['id'];
-        //         $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
-        //         header('Location: user_dashboard.php'); exit;
-        //     }
-        // }
+        if ($role === 'admin') {
+            // Admin Authentication
+            $stmt = $pdo->prepare('SELECT * FROM admins WHERE email = ?');
+            $stmt->execute([$email]);
+            $admin = $stmt->fetch();
+
+            if ($admin && password_verify($password, $admin['password_hash'])) {
+                $_SESSION['admin_id']   = $admin['id'];
+                $_SESSION['admin_name'] = $admin['first_name'];
+                header('Location: admin_dashboard.php'); 
+                exit;
+            }
+        } else {
+            // User (Student/Alumni) Authentication
+            $stmt = $pdo->prepare('SELECT * FROM users WHERE email = ?');
+            $stmt->execute([$email]);
+            $user = $stmt->fetch();
+
+            if ($user && password_verify($password, $user['password_hash'])) {
+                $_SESSION['user_id']   = $user['id'];
+                $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
+                header('Location: user_dashboard.php'); 
+                exit;
+            }
+        }
         $error = 'Invalid email or password. Please try again.';
     }
 }

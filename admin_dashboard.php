@@ -1,99 +1,16 @@
 <?php
-// admin_dashboard.php
+include 'includes/db.php';
 session_start();
 
-// 1. MOCK SESSION (Since you aren't logged in)
-$_SESSION['admin_name'] = "Admin Preview";
+// Auth check (Uses your existing login session)
+if (!isset($_SESSION['admin_id'])) { 
+    header('Location: login.php'); 
+    exit; 
+}
 
-// 2. MOCK STATISTICS
-$stats = [
-    'total'       => 124,
-    'pending'     => 45,
-    'in_progress' => 12,
-    'completed'   => 67
-];
-
-// 3. MOCK REQUESTS DATA
-$requests = [
-    [
-        'id'            => 1001,
-        'full_name'     => 'Juan Dela Cruz',
-        'student_id'    => '2021-0001',
-        'program'       => 'BS IT',
-        'document_type' => 'Transcript of Records',
-        'amount'        => 250.00,
-        'created_at'    => '2023-10-20 09:30:00',
-        'status'        => 'pending'
-    ],
-    [
-        'id'            => 1002,
-        'full_name'     => 'Maria Clara',
-        'student_id'    => '2021-0042',
-        'program'       => 'BS CS',
-        'document_type' => 'Certificate of Enrollment',
-        'amount'        => 100.00,
-        'created_at'    => '2023-10-21 14:15:00',
-        'status'        => 'in_progress'
-    ],
-    [
-        'id'            => 1003,
-        'full_name'     => 'Crisostomo Ibarra',
-        'student_id'    => '2020-0123',
-        'program'       => 'BEED',
-        'document_type' => 'Diploma Copy',
-        'amount'        => 500.00,
-        'created_at'    => '2023-10-18 11:00:00',
-        'status'        => 'completed'
-    ],
-    [
-        'id'            => 1004,
-        'full_name'     => 'Leonor Rivera',
-        'student_id'    => '2022-0055',
-        'program'       => 'BS Accountancy',
-        'document_type' => 'Good Moral Certificate',
-        'amount'        => 75.00,
-        'created_at'    => '2023-10-22 08:45:00',
-        'status'        => 'pending'
-    ]
-];
-
-// Commenting these out so the page doesn't crash
-// include 'includes/db.php';
-// $pdo = getDB();
-// $requests = fetchAllRequests($pdo);
-// $stats = getDashboardStats($pdo);
-?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard – WildDocuments Admin</title>
-  <!-- NOTE: If your CSS file doesn't exist yet, the styling will be missing -->
-  <link rel="stylesheet" href="css/styles.css"> 
-  <style>
-    /* Adding some basic fallback styles in case your CSS isn't loading */
-    :root { --border: #ddd; --primary: #007bff; }
-    body { font-family: sans-serif; background: #f4f7f6; margin: 0; }
-    .app-layout { display: flex; min-height: 100vh; }
-    .main-content { flex: 1; padding: 20px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-    .stat-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .stat-card__value { font-size: 24px; font-weight: bold; }
-    .data-table { width: 100%; border-collapse: collapse; background: white; }
-    .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-    .badge-pending { background: #fff3cd; color: #856404; }
-    .badge-progress { background: #cce5ff; color: #004085; }
-    .badge-completed { background: #d4edda; color: #155724; }
-  </style>
-</head>
-<body>
-
-<?php 
-// Only include these if the files actually exist in your folder
-if (file_exists('includes/admin_navbar.php')) include 'includes/admin_navbar.php'; 
+$pdo = getDB();
+$stats = getDashboardStats($pdo);
+$requests = fetchRecentRequests($pdo);
 ?>
 
 <div class="app-layout">
