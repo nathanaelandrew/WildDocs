@@ -2,31 +2,25 @@
 // includes/db.php
 
 function getDB() {
-
     $host     = 'aws-1-ap-northeast-1.pooler.supabase.com'; 
     $port     = '5432';
     $dbname   = 'postgres';
-    $user     = 'postgres.ynfkvcxdnsihgmneedeu';
-    $password = 'YOUR_PASSWORD';
+    // Format: [db-user].[project-ref]
+    $user     = 'postgres.ynfkvcxdnsihgmneedeu'; 
+    $password = 'sixseven67'; 
 
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require;sslcert=";
+    // We add the 'options' parameter to the DSN to try and force the ID
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require;options='--endpoint=ynfkvcxdnsihgmneedeu'";
 
     try {
-
         $pdo = new PDO($dsn, $user, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_PERSISTENT => false,
-            PDO::PGSQL_ATTR_DISABLE_PREPARES => true
         ]);
-
         return $pdo;
-
     } catch (PDOException $e) {
-        die("Supabase Connection Failed: " . $e->getMessage());
+        die("Pooler Connection Failed: " . $e->getMessage());
     }
 }
-
 // Fetch stats for the 4 top cards
 function getDashboardStats($pdo) {
     // 1. Initialize ALL keys with 0 so they are never "undefined"
