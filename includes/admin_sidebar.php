@@ -14,6 +14,7 @@ function sidebarLink(string $href, string $icon, string $label, string $current)
 
   <?php sidebarLink('admin_dashboard.php',     '🏠', 'Overview',      $currentPage); ?>
   <?php sidebarLink('admin_requests.php',      '📋', 'Manage Requests',  $currentPage); ?>
+  <?php sidebarLink('admin_payments.php',      '💳', 'Payments', $currentPage); ?>
   <?php sidebarLink('admin_notifications.php', '🔔', 'Notifications', $currentPage); ?>
 
   <div class="sidebar__divider"></div>
@@ -25,8 +26,11 @@ function sidebarLink(string $href, string $icon, string $label, string $current)
   <!-- Logout pinned to bottom -->
   <div class="sidebar__bottom">
     <div class="sidebar__divider"></div>
-    <a href="logout.php" class="sidebar__logout" onclick="return confirm('Log out of WildDocuments?')">
-      <span class="icon">🚪</span>Logout
+    <a href="logout.php" 
+      class="sidebar__logout" 
+      style="display: flex; justify-content: center; align-items: center;" 
+      onclick="return confirm('Log out of WildDocuments?')">
+          Logout
     </a>
   </div>
 

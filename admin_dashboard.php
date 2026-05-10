@@ -59,25 +59,21 @@ $requests = fetchRecentRequests($pdo, 20);
             <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-card__icon">📋</div>
                     <div class="stat-card__label">Total Requests</div>
                     <div class="stat-card__value"><?= $stats['total'] ?></div>
                     <div class="stat-card__sub">All time</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card__icon">⏳</div>
                     <div class="stat-card__label">Pending</div>
                     <div class="stat-card__value" style="color: #854d0e;"><?= $stats['pending'] ?></div>
                     <div class="stat-card__sub">Awaiting action</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card__icon">💳</div>
                     <div class="stat-card__label">Paid/Approved</div>
                     <div class="stat-card__value" style="color: #1e40af;"><?= ($stats['paid'] ?? 0) + ($stats['approved'] ?? 0) ?></div>
                     <div class="stat-card__sub">In processing</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-card__icon">📦</div>
                     <div class="stat-card__label">Released</div>
                     <div class="stat-card__value" style="color: #166534;"><?= $stats['released'] ?></div>
                     <div class="stat-card__sub">Ready/Claimed</div>

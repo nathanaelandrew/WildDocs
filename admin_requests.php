@@ -15,12 +15,16 @@ $pdo = getDB();
 $search = trim($_GET['search'] ?? '');
 $filterStatus = $_GET['status'] ?? '';
 
-// Build the SQL Query dynamically based on filters
-$sql = "SELECT r.*, u.first_name, u.last_name, s.student_number, s.program, s.year_level
+$sql = "SELECT 
+            r.*, 
+            u.first_name, u.last_name, 
+            s.student_number, s.program, s.year_level,
+            dt.name as document_name
         FROM requests r
         JOIN users u ON r.user_id = u.id
         LEFT JOIN students s ON u.id = s.user_id
-        WHERE 1=1"; // Placeholder to allow adding AND conditions
+        JOIN document_types dt ON r.document_type_id = dt.id
+        WHERE 1=1"; 
 
 $params = [];
 
@@ -41,7 +45,7 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requests = $stmt->fetchAll();
 
-// Helper for status badge colors
+// --- MISSING FUNCTION RE-ADDED HERE ---
 function getStatusBadgeClass($status) {
     return match($status) {
         'pending'  => 'badge-pending',
@@ -65,8 +69,6 @@ function getStatusBadgeClass($status) {
     .modal-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 3px; }
     .modal-value { font-weight: 600; color: var(--text-dark); }
     .badge-paid { background:#EFF6FF; color:#1D4ED8; }
-    
-    /* Ensure filter bar looks clean */
     .filter-card { margin-bottom: 20px; background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
   </style>
 </head>
@@ -88,16 +90,12 @@ function getStatusBadgeClass($status) {
         <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Export List</button>
       </div>
 
-      <!-- --- 2. SEARCH AND FILTER BAR --- -->
+      <!-- Search and Filter -->
       <div class="filter-card">
         <div class="card__body" style="padding:16px 20px">
           <form method="GET" style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
             <div style="flex: 0 1 450px; min-width: 300px;">
-                <input type="text" 
-                      name="search" 
-                      class="form-control" 
-                      placeholder="Search by Reference, Name, or ID..." 
-                      value="<?= htmlspecialchars($search) ?>">
+                <input type="text" name="search" class="form-control" placeholder="Search by Reference, Name, or ID..." value="<?= htmlspecialchars($search) ?>">
             </div>
             <div style="width: 180px;">
                 <select name="status" class="form-control">
@@ -131,7 +129,7 @@ function getStatusBadgeClass($status) {
                   <th>Program</th>
                   <th>Document</th>
                   <th>Date</th>
-                  <th>Status</th>
+                  <th style="text-align:center">Status</th>
                   <th style="text-align:center">Actions</th>
                 </tr>
               </thead>
@@ -149,7 +147,15 @@ function getStatusBadgeClass($status) {
                     <td style="font-size:.85rem"><?= htmlspecialchars($r['program']) ?></td>
                     <td style="font-weight:500"><?= htmlspecialchars($r['document_name']) ?></td>
                     <td style="font-size:.85rem"><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
-                    <td><span class="badge <?= getStatusBadgeClass($r['status']) ?>"><?= ucfirst($r['status']) ?></span></td>
+                    
+                    <!-- Fixed Status Column -->
+                    <td style="text-align:center">
+                        <span class="badge <?= getStatusBadgeClass($r['status']) ?>">
+                            <?= ucfirst($r['status']) ?>
+                        </span>
+                    </td>
+                    
+                    <!-- Fixed Actions Column -->
                     <td class="col-actions">
                         <select class="status-select" onchange="updateStatus(<?= $r['id'] ?>, this.value, event)">
                           <option value="pending"  <?= $r['status'] === 'pending' ? 'selected':'' ?>>Pending</option>
@@ -171,7 +177,7 @@ function getStatusBadgeClass($status) {
   </main>
 </div>
 
-<!-- Request Details Modal -->
+<!-- Modal and Scripts remain the same -->
 <div class="modal-overlay" id="detailsModal">
     <div class="modal" style="max-width: 500px; text-align: left;">
         <h3 id="modalRef" style="color: var(--crimson); margin-bottom: 5px;">Ref #</h3>

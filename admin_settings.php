@@ -115,7 +115,7 @@ $prefs = [
         <!-- 1. NOTIFICATIONS -->
         <div class="card">
           <div class="card__header">
-            <h3>🔔 Notifications</h3>
+            <h3>Notifications</h3>
           </div>
           <div class="card__body">
             <p style="margin-bottom:20px; font-size:.85rem; color:var(--text-muted)">Configure your email and dashboard alerts.</p>
@@ -143,7 +143,7 @@ $prefs = [
             <!-- 2. SECURITY (CHANGE PASSWORD) -->
             <div class="card" style="margin-bottom: 24px;">
               <div class="card__header">
-                <h3>🔒 Security</h3>
+                <h3>Security</h3>
               </div>
               <div class="card__body">
                 <form method="POST">
@@ -170,7 +170,7 @@ $prefs = [
             <!-- 3. DANGER ZONE -->
             <div class="card danger-card">
               <div class="card__header" style="background:transparent; border-bottom: 1px solid #FECACA;">
-                <h3>⚠️ Danger Zone</h3>
+                <h3>Danger Zone</h3>
                 <span class="badge-danger">Irreversible</span>
               </div>
               <div class="card__body">

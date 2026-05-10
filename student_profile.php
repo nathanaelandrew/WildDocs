@@ -1,199 +1,172 @@
 <?php
-// user_profile.php — WildDocuments User Profile
+// student_profile.php
 session_start();
+require_once 'includes/db.php';
 
-// PREVIEW MODE: Prevents redirect if testing
-if (!isset($_SESSION['user_id'])) {
-    $_SESSION['user_id'] = 999;
-    $_SESSION['user_name'] = "Juan dela Cruz";
+// Auth Check: Only allow logged-in students
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'student') { 
+    header('Location: login.php'); 
+    exit; 
 }
 
-// Mock Data (Fetched from DB in real scenario)
-$user = [
-    'first_name' => 'Juan',
-    'last_name'  => 'dela Cruz',
-    'student_id' => '2021-00123',
-    'program'    => 'BS Computer Science',
-    'email'      => 'juan.delacruz@university.edu.ph',
-    'phone'      => '0912 345 6789',
-    'join_date'  => 'Oct 2023'
-];
+$pdo = getDB();
+$userId = $_SESSION['user_id'];
+$successMsg = "";
+$errorMsg = "";
 
-$success = false;
+// --- HANDLE PROFILE UPDATE ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Logic for updating would go here
-    $success = true;
+    $firstName  = trim($_POST['first_name'] ?? '');
+    $lastName   = trim($_POST['last_name'] ?? '');
+    $middleName = trim($_POST['middle_name'] ?? '');
+
+    if (empty($firstName) || empty($lastName)) {
+        $errorMsg = "Please fill in all required fields.";
+    } else {
+        try {
+            // Update the parent 'users' table
+            $stmt = $pdo->prepare("
+                UPDATE users 
+                SET first_name = ?, last_name = ?, middle_name = ? 
+                WHERE id = ?
+            ");
+            $stmt->execute([$firstName, $lastName, $middleName ?: null, $userId]);
+
+            // Update the Session name so the Navbar/Sidebar updates immediately
+            $_SESSION['user_name'] = $firstName . ' ' . $lastName;
+            $successMsg = "Profile updated successfully!";
+        } catch (Exception $e) {
+            $errorMsg = "Update failed: " . $e->getMessage();
+        }
+    }
 }
+
+// --- FETCH CURRENT STUDENT DATA ---
+// JOIN users with students table to get names and academic info
+$stmt = $pdo->prepare("
+    SELECT u.*, s.student_number, s.program, s.year_level 
+    FROM users u 
+    JOIN students s ON u.id = s.user_id 
+    WHERE u.id = ?
+");
+$stmt->execute([$userId]);
+$student = $stmt->fetch();
+
+// Generate Avatar Initials
+$initials = strtoupper(substr($student['first_name'], 0, 1) . substr($student['last_name'], 0, 1));
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile — WildDocuments</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <style>
-        /* Profile Specific Styles */
-        .profile-card {
-            background: var(--white);
-            border-radius: 12px;
-            box-shadow: var(--shadow-sm);
-            padding: 32px;
-            margin-bottom: 24px;
-        }
-        .profile-header-flex {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .avatar-circle {
-            width: 80px; height: 80px;
-            background: var(--pink-bg);
-            color: var(--crimson);
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem; font-weight: 700;
-            border: 3px solid var(--white);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }
-        .profile-title h2 { margin: 0; font-size: 1.4rem; color: var(--text-dark); }
-        .profile-title p { margin: 4px 0 0; color: var(--text-muted); font-size: 0.9rem; }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        .read-only-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            padding: 12px 16px;
-            border-radius: 8px;
-            color: #64748b;
-            font-size: 0.95rem;
-            cursor: not-allowed;
-        }
-        .section-label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-        
-        .alert-success {
-            background: #f0fdf4;
-            border-left: 4px solid #16a34a;
-            color: #166534;
-            padding: 16px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Profile – WildDocuments</title>
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<?php 
-if (file_exists('includes/student_navbar.php')) include 'includes/student_navbar.php'; 
-?>
+<?php include 'includes/student_navbar.php'; ?>
 
 <div class="app-layout">
-    <?php if (file_exists('includes/student_sidebar.php')) include 'includes/student_sidebar.php'; ?>
+  <?php include 'includes/student_sidebar.php'; ?>
 
-    <main style="padding: 40px 0 64px; flex: 1; background: var(--bg-light); overflow-x: hidden;">
-        <div class="container">
-            
-            <!-- Success Message -->
-            <?php if ($success): ?>
-                <div class="alert-success">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    <span>Profile settings updated successfully.</span>
-                </div>
-            <?php endif; ?>
+  <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 50px;">
+    <div class="dashboard-page">
 
-            <div class="profile-card">
-                <div class="profile-header-flex">
-                    <div class="avatar-circle">
-                        <?= substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1) ?>
-                    </div>
-                    <div class="profile-title">
-                        <h2>Personal Information</h2>
-                        <p>Manage your basic account details and contact information.</p>
-                    </div>
-                </div>
-
-                <form method="POST" action="user_profile.php">
-                    <div class="info-grid">
-                        <div class="form-group">
-                            <label class="section-label">First Name</label>
-                            <input type="text" class="form-control" name="first_name" value="<?= htmlspecialchars($user['first_name']) ?>">
-                        </div>
-                        <div class="form-group">
-                            <label class="section-label">Last Name</label>
-                            <input type="text" class="form-control" name="last_name" value="<?= htmlspecialchars($user['last_name']) ?>">
-                        </div>
-                    </div>
-
-                    <div class="info-grid">
-                        <div class="form-group">
-                            <label class="section-label">University Email</label>
-                            <div class="read-only-box"><?= $user['email'] ?></div>
-                            <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Email is managed by the registrar and cannot be changed.</p>
-                        </div>
-                        <div class="form-group">
-                            <label class="section-label">Contact Number</label>
-                            <input type="text" class="form-control" name="phone" value="<?= htmlspecialchars($user['phone']) ?>">
-                        </div>
-                    </div>
-
-                    <div style="margin-top: 12px; border-top: 1px solid #f1f5f9; padding-top: 24px;">
-                        <button type="submit" class="btn btn-primary">Save Profile Changes</button>
-                    </div>
-                </form>
-            </div>
-
-            <div class="profile-card">
-                <h2 style="font-size: 1.2rem; margin-bottom: 20px;">Academic Details</h2>
-                <div class="info-grid">
-                    <div>
-                        <span class="section-label">Student ID</span>
-                        <div class="read-only-box"><?= $user['student_id'] ?></div>
-                    </div>
-                    <div>
-                        <span class="section-label">Degree Program</span>
-                        <div class="read-only-box"><?= $user['program'] ?></div>
-                    </div>
-                    <div>
-                        <span class="section-label">Account Status</span>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
-                            <span style="width: 10px; height: 10px; background: #16a34a; border-radius: 50%;"></span>
-                            <span style="font-weight: 600; color: #16a34a; font-size: 0.9rem;">Verified Student</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Danger Zone -->
-            <div class="profile-card" style="border: 1px solid #fee2e2;">
-                <h2 style="font-size: 1.1rem; color: #b91c1c; margin-bottom: 10px;">Security</h2>
-                <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Need to change your password? Protect your account with a strong password.</p>
-                <a href="#" class="btn btn-outline" style="border-color: #fca5a5; color: #b91c1c;">Update Password</a>
-            </div>
-
+      <div class="page-title-row">
+        <div>
+          <h2>Account Profile</h2>
+          <p>Manage your personal information and account security.</p>
         </div>
-    </main>
+      </div>
+
+      <?php if($successMsg): ?>
+        <div class="alert alert-success" style="margin-bottom: 20px;">✅ <?= $successMsg ?></div>
+      <?php endif; ?>
+      
+      <?php if($errorMsg): ?>
+        <div class="alert alert-error" style="margin-bottom: 20px;">⚠️ <?= $errorMsg ?></div>
+      <?php endif; ?>
+
+      <div style="display:grid; grid-template-columns: 300px 1fr; gap: 24px; align-items: start;">
+
+        <!-- Left: Profile Summary Card -->
+        <div class="card">
+          <div class="profile-avatar-wrap" style="padding: 40px 20px; text-align: center; border-bottom: 1px solid var(--border-light);">
+            <div class="profile-avatar" style="margin: 0 auto 15px; width: 80px; height: 80px; font-size: 2rem;">
+                <?= $initials ?>
+            </div>
+            <h3 style="margin:0; font-size: 1.1rem;"><?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;"><?= htmlspecialchars($student['email']) ?></p>
+            <span class="badge badge-new" style="margin-top: 12px; background: var(--crimson); color: white;">
+                <?= $student['student_number'] ?>
+            </span>
+          </div>
+          <div style="padding: 20px; background: var(--off-white);">
+            <div style="font-size: 0.7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">System Metadata</div>
+            <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Internal ID</span>
+                    <span style="font-weight: 600;">#<?= $student['id'] ?></span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Joined Date</span>
+                    <span style="font-weight: 600;"><?= date('M d, Y', strtotime($student['join_date'])) ?></span>
+                </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Edit Form Card -->
+        <div class="card">
+          <div class="card__header">
+            <h3>Update Personal Information</h3>
+          </div>
+          <div class="card__body" style="padding: 30px;">
+            <form method="POST">
+              <div class="form-section">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">First Name <span class="req">*</span></label>
+                    <input type="text" name="first_name" class="form-control" value="<?= htmlspecialchars($student['first_name']) ?>" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Last Name <span class="req">*</span></label>
+                    <input type="text" name="last_name" class="form-control" value="<?= htmlspecialchars($student['last_name']) ?>" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Middle Name <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+                  <input type="text" name="middle_name" class="form-control" value="<?= htmlspecialchars($student['middle_name'] ?? '') ?>">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Email Address <span class="req">*</span></label>
+                  <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($student['email']) ?>" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Assigned Role</label>
+                  <input type="text" class="form-control" value="<?= $student['student_number'] ?>" readonly style="background: #f8fafc;">
+                  <div class="form-hint">Administrative roles can only be modified via database management.</div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:12px; margin-top: 10px;">
+                <button type="submit" class="btn btn-primary" style="padding: 12px 30px;">Save Profile Changes</button>
+                <button type="reset" class="btn btn-ghost">Reset Form</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
 </div>
 
-<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
+<?php include 'includes/footer.php'; ?>
 
 </body>
 </html>
