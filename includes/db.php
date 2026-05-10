@@ -2,23 +2,28 @@
 // includes/db.php
 
 function getDB() {
-    // Get these from Supabase Project Settings -> Database -> Connection String (PHP)
-    $host     = 'db.ynfkvcxdnsihgmneedeu.supabase.co';
+    // These details come directly from your connection string:
+    $host     = 'aws-1-ap-northeast-1.pooler.supabase.com'; 
     $port     = '5432';
     $dbname   = 'postgres';
-    $user     = 'postgres';
-    $password = 'CSIT226InformationManagement'; // Use the password you set when creating the project
+    $user     = 'postgres.ynfkvcxdnsihgmneedeu';
+    $password = 'CSIT226InformationManagement'; // The password you set for the database
 
+    // Construct the DSN
+    // sslmode=require is MANDATORY for Supabase cloud connections
     $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
 
     try {
         $pdo = new PDO($dsn, $user, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            // Important for connection pooling:
+            PDO::ATTR_PERSISTENT => false 
         ]);
         return $pdo;
     } catch (PDOException $e) {
-        die("Connection failed: " . $e->getMessage());
+        // If it fails, this will tell you why (e.g. "Password Authentication Failed")
+        die("Supabase Connection Failed: " . $e->getMessage());
     }
 }
 
