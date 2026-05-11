@@ -1,24 +1,71 @@
 <?php
 // includes/db.php
-
 function getDB() {
     $host     = 'aws-1-ap-northeast-1.pooler.supabase.com'; 
-    $port     = '5432';
+    $port     = '6543'; 
     $dbname   = 'postgres';
-    // Format: [db-user].[project-ref]
     $user     = 'postgres.ynfkvcxdnsihgmneedeu'; 
-    $password = 'sixseven67'; 
+    $password = 'CSIT226InformationManagement'; 
 
-    // We add the 'options' parameter to the DSN to try and force the ID
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require;options='--endpoint=ynfkvcxdnsihgmneedeu'";
+    // Get the path to that empty file you just created
+    $certPath = __DIR__ . '/empty.crt';
 
     try {
+        /**
+         * THE FINAL BYPASS:
+         * We explicitly point 'sslcert' to our empty file in the project folder.
+         * This tells the Mac driver: "Use this file instead of looking in /var/root/"
+         */
+        putenv("PGGSSENCMODE=disable");
+        
+        $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;" .
+               "sslmode=require;" .
+               "sslcert=$certPath;" . // Points to your blank file
+               "gssencmode=disable";
+
         $pdo = new PDO($dsn, $user, $password, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_TIMEOUT            => 10
         ]);
+        
         return $pdo;
+
     } catch (PDOException $e) {
-        die("Pooler Connection Failed: " . $e->getMessage());
+        $error = $e->getMessage();
+
+        // If you get "no start line", it means the driver REALLY wants a real cert.
+        // In that case, we will provide the official Supabase cert.
+        if (str_contains($error, "no start line")) {
+            return getDB_with_real_cert();
+        }
+
+        die("DATABASE ERROR: " . $error);
+    }
+}
+
+// Fallback function if the empty file isn't enough
+function getDB_with_real_cert() {
+    $host     = 'aws-1-ap-northeast-1.pooler.supabase.com'; 
+    $port     = '6543'; 
+    $dbname   = 'postgres';
+    $user     = 'postgres.ynfkvcxdnsihgmneedeu'; 
+    $password = 'CSIT226InformationManagement'; 
+    
+    // Download the actual Supabase Root CA
+    $ca_url = "https://database.secure.supabase.com/certificates/root.crt";
+    $ca_path = __DIR__ . '/supabase_root.crt';
+    
+    if (!file_exists($ca_path)) {
+        file_put_contents($ca_path, file_get_contents($ca_url));
+    }
+
+    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=verify-ca;sslrootcert=$ca_path";
+    
+    try {
+        return new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    } catch (Exception $e) {
+        die("ULTIMATE ERROR: " . $e->getMessage());
     }
 }
 // Fetch stats for the 4 top cards
