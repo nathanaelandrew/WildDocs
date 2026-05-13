@@ -8,7 +8,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
     <div class="navbar__inner">
 
       <!-- Logo -->
-      <a href="landing_page.php" class="navbar__logo">
+      <a href="index.php" class="navbar__logo">
         <div class="navbar__logo-icon">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#8B1A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -22,9 +22,9 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 
       <!-- Nav links -->
       <ul class="navbar__links">
-        <li><a href="#features"  class="navbar__link <?= $currentPage==='landing_page.php'?'':'hidden-mobile' ?>">Features</a></li>
-        <li><a href="#how"       class="navbar__link <?= $currentPage==='landing_page.php'?'':'hidden-mobile' ?>">How It Works</a></li>
-        <li><a href="#documents" class="navbar__link <?= $currentPage==='landing_page.php'?'':'hidden-mobile' ?>">Documents</a></li>
+        <li><a href="#features"  class="navbar__link <?= $currentPage==='index.php'?'':'hidden-mobile' ?>">Features</a></li>
+        <li><a href="#how"       class="navbar__link <?= $currentPage==='index.php'?'':'hidden-mobile' ?>">How It Works</a></li>
+        <li><a href="#documents" class="navbar__link <?= $currentPage==='index.php'?'':'hidden-mobile' ?>">Documents</a></li>
       </ul>
 
       <!-- CTA -->
