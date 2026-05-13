@@ -19,6 +19,7 @@ function studentSidebarLink(string $href, string $icon, string $label, string $c
 
   <?php studentSidebarLink('student_dashboard.php', '🏠', 'Dashboard', $currentPage); ?>
   <?php studentSidebarLink('student_request.php',   '📄', 'Request Document', $currentPage); ?>
+  <?php studentSidebarLink('student_payments.php', '💳', 'Payments', $currentPage); ?>
   
   <!-- ADDED: Notifications Link -->
   <!-- You can replace '3' with a dynamic count from your database later -->
@@ -29,13 +30,14 @@ function studentSidebarLink(string $href, string $icon, string $label, string $c
 
   <?php studentSidebarLink('student_profile.php',  '👤', 'My Profile', $currentPage); ?>
   <?php studentSidebarLink('student_settings.php', '⚙️', 'Settings',   $currentPage); ?>
-
-
-  <!-- Logout pinned to bottom -->
   <div class="sidebar__bottom">
     <div class="sidebar__divider"></div>
-    <a href="logout.php" class="sidebar__logout" onclick="return confirm('Log out of WildDocuments?')">
-      <span class="icon">🚪</span>Logout
+    <a href="logout.php" 
+      class="sidebar__logout" 
+      style="display: flex; justify-content: center; align-items: center;" 
+      onclick="return confirm('Log out of WildDocuments?')">
+          Logout
+    </a>
     </a>
   </div>
 

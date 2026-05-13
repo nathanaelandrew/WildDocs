@@ -43,31 +43,6 @@ function getDB() {
         die("DATABASE ERROR: " . $error);
     }
 }
-
-// Fallback function if the empty file isn't enough
-function getDB_with_real_cert() {
-    $host     = 'aws-1-ap-northeast-1.pooler.supabase.com'; 
-    $port     = '6543'; 
-    $dbname   = 'postgres';
-    $user     = 'postgres.ynfkvcxdnsihgmneedeu'; 
-    $password = 'CSIT226InformationManagement'; 
-    
-    // Download the actual Supabase Root CA
-    $ca_url = "https://database.secure.supabase.com/certificates/root.crt";
-    $ca_path = __DIR__ . '/supabase_root.crt';
-    
-    if (!file_exists($ca_path)) {
-        file_put_contents($ca_path, file_get_contents($ca_url));
-    }
-
-    $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=verify-ca;sslrootcert=$ca_path";
-    
-    try {
-        return new PDO($dsn, $user, $password, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-    } catch (Exception $e) {
-        die("ULTIMATE ERROR: " . $e->getMessage());
-    }
-}
 // Fetch stats for the 4 top cards
 function getDashboardStats($pdo) {
     // 1. Initialize ALL keys with 0 so they are never "undefined"
@@ -104,14 +79,15 @@ function getDashboardStats($pdo) {
 // Fetch the list of requests
 // Fetch requests for the Admin Dashboard (with Student details)
 function fetchRecentRequests($pdo, $limit = 10) {
-    // We JOIN requests with users (for names) and students (for student_number and program)
     $sql = "SELECT 
                 r.*, 
                 u.first_name, u.last_name, 
-                s.student_number, s.program, s.year_level
+                s.student_number, s.program, s.year_level,
+                dt.name as document_name  -- <--- WE GET THE NAME FROM HERE NOW
             FROM requests r
             JOIN users u ON r.user_id = u.id
             LEFT JOIN students s ON u.id = s.user_id
+            JOIN document_types dt ON r.document_type_id = dt.id -- <--- THE JOIN
             ORDER BY r.created_at DESC 
             LIMIT :limit";
             
@@ -122,10 +98,27 @@ function fetchRecentRequests($pdo, $limit = 10) {
 }
 
 // Fetch requests for a specific student
+// includes/db.php
+
 function fetchStudentRequests($pdo, $user_id) {
-    $stmt = $pdo->prepare("SELECT * FROM requests WHERE user_id = ? ORDER BY created_at DESC");
-    $stmt->execute([$user_id]);
-    return $stmt->fetchAll();
+    // We JOIN the requests table with the document_types table 
+    // to get the 'name' and call it 'document_name'
+    $sql = "SELECT 
+                r.*, 
+                dt.name as document_name 
+            FROM requests r
+            JOIN document_types dt ON r.document_type_id = dt.id
+            WHERE r.user_id = ? 
+            ORDER BY r.created_at DESC";
+            
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$user_id]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Return empty array if query fails
+        return [];
+    }
 }
 
 function getUnviewedCount($pdo) {

@@ -1,19 +1,74 @@
 <?php
-// 1. Session start MUST be at the absolute top
+// student_settings.php
 session_start();
+require_once 'includes/db.php';
 
-// 2. User Authentication check
-// if (!isset($_SESSION['user_id'])) { 
-//     header('Location: login.php'); 
-//     exit; 
-// }
+// Auth Check: Only allow logged-in students
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'student') { 
+    header('Location: login.php'); 
+    exit; 
+}
 
-// 3. Data logic for the page
+$pdo = getDB();
+$userId = $_SESSION['user_id'];
+$successMsg = "";
+$errorMsg = "";
+
+// --- 1. HANDLE PASSWORD CHANGE ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_password') {
+    $current = $_POST['current_password'];
+    $new = $_POST['new_password'];
+    $confirm = $_POST['confirm_password'];
+
+    // Fetch current hash from the parent 'users' table
+    $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch();
+
+    if (!password_verify($current, $user['password_hash'])) {
+        $errorMsg = "Current password is incorrect.";
+    } elseif ($new !== $confirm) {
+        $errorMsg = "New passwords do not match.";
+    } elseif (strlen($new) < 8) {
+        $errorMsg = "New password must be at least 8 characters.";
+    } else {
+        $newHash = password_hash($new, PASSWORD_DEFAULT);
+        $update = $pdo->prepare("UPDATE users SET password_hash = ? WHERE id = ?");
+        $update->execute([$newHash, $userId]);
+        $successMsg = "Password updated successfully!";
+    }
+}
+
+// --- 2. HANDLE ACCOUNT DELETION ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_account') {
+    $confirmText = trim($_POST['delete_confirm']);
+    if ($confirmText === 'DELETE') {
+        try {
+            // Transaction to ensure complete deletion
+            $pdo->beginTransaction();
+            
+            // Because of ON DELETE CASCADE, deleting from 'users' 
+            // will automatically remove the 'students' subclass entry.
+            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+            $stmt->execute([$userId]);
+            
+            $pdo->commit();
+            
+            session_destroy();
+            header('Location: login.php?msg=account_deleted');
+            exit;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $errorMsg = "Deletion failed: " . $e->getMessage();
+        }
+    } else {
+        $errorMsg = "Please type 'DELETE' exactly to confirm account removal.";
+    }
+}
+
 $prefs = [
-    ['new_request',     'New Request Submitted',    'Get notified when a student submits a new request.',         true],
-    ['payment_confirm', 'Payment Confirmed',         'Get notified when a payment is received.',                   true],
-    ['status_update',   'Status Updated',            'Get notified when a request status changes.',                false],
-    ['system_alerts',   'System Alerts',             'Receive system maintenance and important alerts.',            true],
+    ['new_update',      'Status Updates',          'Get notified when your request is approved or released.',    true],
+    ['system_alerts',   'University Bulletins',    'Receive important maintenance and school announcements.',    true],
 ];
 ?>
 <!DOCTYPE html>
@@ -21,25 +76,19 @@ $prefs = [
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Settings – WildDocuments User</title>
+  <title>Settings – WildDocuments</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     /* Toggle Switch CSS */
     .toggle-switch { position:relative; display:inline-block; cursor:pointer; }
     .toggle-switch input { display:none; }
-    .toggle-track {
-      display:block; width:44px; height:24px; border-radius:50px;
-      background:var(--border); transition:background .2s; position:relative;
-    }
-    .toggle-thumb {
-      position:absolute; top:3px; left:3px;
-      width:18px; height:18px; border-radius:50%;
-      background:#fff; transition:transform .2s;
-      box-shadow:0 1px 4px rgba(0,0,0,.2);
-    }
+    .toggle-track { display:block; width:44px; height:24px; border-radius:50px; background:var(--border); transition:background .2s; position:relative; }
+    .toggle-thumb { position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform .2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
     .toggle-switch input:checked + .toggle-track { background:var(--red-accent); }
     .toggle-switch input:checked + .toggle-track .toggle-thumb { transform:translateX(20px); }
-    .divider { margin: 20px 0; border-top: 1px solid var(--border-light); }
+    
+    .danger-card { border: 1.5px solid #FCA5A5; background: #FFF1F2; }
+    .badge-danger { background: #EF4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
   </style>
 </head>
 <body>
@@ -49,82 +98,94 @@ $prefs = [
 <div class="app-layout">
   <?php include 'includes/student_sidebar.php'; ?>
 
-  <main class="main-content">
+  <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 50px;">
     <div class="dashboard-page">
 
       <div class="page-title-row">
         <div>
-          <h2>Settings</h2>
-          <p>Manage your account preferences and security settings.</p>
+          <h2>Account Settings</h2>
+          <p>Configure notifications and maintain your account security.</p>
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
+      <?php if($successMsg): ?>
+        <div class="alert alert-success" style="margin-bottom: 24px;">✅ <?= $successMsg ?></div>
+      <?php endif; ?>
+      <?php if($errorMsg): ?>
+        <div class="alert alert-error" style="margin-bottom: 24px;">⚠️ <?= $errorMsg ?></div>
+      <?php endif; ?>
 
-        <!-- Notification Preferences -->
+      <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: start;">
+
+        <!-- NOTIFICATIONS -->
         <div class="card">
           <div class="card__header">
-            <h3>🔔 Notification Preferences</h3>
+            <h3>Notifications</h3>
           </div>
           <div class="card__body">
-            <p style="margin-bottom:18px;font-size:.85rem">Choose which events you want to be notified about.</p>
+            <p style="margin-bottom:20px; font-size:.85rem; color:var(--text-muted)">Choose how you want to be alerted about your documents.</p>
 
             <?php foreach ($prefs as $p): ?>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border-light)">
-              <div>
-                <div style="font-size:.88rem;font-weight:600;color:var(--text-dark)"><?= $p[1] ?></div>
-                <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px"><?= $p[2] ?></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 0; border-bottom:1px solid var(--border-light)">
+              <div style="flex:1; padding-right: 15px;">
+                <div style="font-size:.88rem; font-weight:600; color:var(--text-dark)"><?= $p[1] ?></div>
+                <div style="font-size:.78rem; color:var(--text-muted); margin-top:2px"><?= $p[2] ?></div>
               </div>
               <label class="toggle-switch">
-                <input type="checkbox" name="notif_<?= $p[0] ?>" <?= $p[3] ? 'checked' : '' ?>>
-                <span class="toggle-track">
-                  <span class="toggle-thumb"></span>
-                </span>
+                <input type="checkbox" <?= $p[3] ? 'checked' : '' ?>>
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
               </label>
             </div>
             <?php endforeach; ?>
 
-            <div style="margin-top:20px">
-              <button class="btn btn-primary btn-sm" onclick="savePrefs()">Save Preferences</button>
+            <div style="margin-top:25px">
+              <button class="btn btn-primary" onclick="alert('Student preferences updated!')">Update Preferences</button>
             </div>
           </div>
         </div>
 
-        <!-- Security -->
-        <div class="card">
-          <div class="card__header">
-            <h3>🔒 Security</h3>
-          </div>
-          <div class="card__body">
-            <p style="margin-bottom:18px;font-size:.85rem">Update your user password to keep your account secure.</p>
-
-            <form method="POST" action="change_password.php" onsubmit="return validatePwForm()">
-              <div class="form-group">
-                <label class="form-label">Current Password <span class="req">*</span></label>
-                <input type="password" name="current_password" class="form-control" placeholder="Enter current password" required>
+        <div>
+            <!-- SECURITY (PASSWORD) -->
+            <div class="card" style="margin-bottom: 24px;">
+              <div class="card__header">
+                <h3>Security</h3>
               </div>
-              <div class="form-group">
-                <label class="form-label">New Password <span class="req">*</span></label>
-                <input type="password" name="new_password" id="newPw" class="form-control" placeholder="Minimum 8 characters" required>
-                <div class="form-hint">Use at least 8 characters with letters and numbers.</div>
+              <div class="card__body">
+                <form method="POST">
+                  <input type="hidden" name="action" value="update_password">
+                  <div class="form-group">
+                    <label class="form-label">Current Password</label>
+                    <input type="password" name="current_password" class="form-control" required>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required minlength="8">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Change Password</button>
+                </form>
               </div>
-              <div class="form-group">
-                <label class="form-label">Confirm New Password <span class="req">*</span></label>
-                <input type="password" name="confirm_password" id="confirmPw" class="form-control" placeholder="Re-enter new password" required>
-                <div class="form-error" id="pwError" style="display:none; color:red; font-size:0.8rem;">Passwords do not match.</div>
-              </div>
-              <button type="submit" class="btn btn-primary btn-sm">Update Password</button>
-            </form>
-
-            <div class="divider"></div>
-
-            <!-- Danger Zone -->
-            <div style="background:var(--pink-bg);border:1px solid var(--pink-soft);border-radius:var(--radius);padding:16px">
-              <div style="font-size:.85rem;font-weight:700;color:var(--crimson);margin-bottom:6px">⚠️ Danger Zone</div>
-              <p style="font-size:.82rem;margin-bottom:12px">Logging out will end your current user session.</p>
-              <a href="logout.php" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to log out?')">Logout Now</a>
             </div>
-          </div>
+
+            <!-- DANGER ZONE -->
+            <div class="card danger-card">
+              <div class="card__header" style="background:transparent; border-bottom: 1px solid #FECACA;">
+                <h3>Danger Zone</h3>
+                <span class="badge-danger">Action Required</span>
+              </div>
+              <div class="card__body">
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: #991B1B; margin-bottom: 4px;">Delete My Student Account</h4>
+                    <p style="font-size: 0.82rem; color: #7F1D1D;">Permanently delete your profile and all document request history. This action cannot be reversed.</p>
+                </div>
+                <button class="btn btn-danger" onclick="openDeleteModal()">Delete Account</button>
+              </div>
+            </div>
         </div>
 
       </div>
@@ -132,22 +193,34 @@ $prefs = [
   </main>
 </div>
 
-<?php if (file_exists('includes/footer.php')) include 'includes/footer.php'; ?>
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal" style="max-width: 400px;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">👋</div>
+        <h3>Close your account?</h3>
+        <p style="margin-bottom: 20px; color: var(--text-mid);">This will delete all your records. To confirm, please type <strong>DELETE</strong> below.</p>
+        
+        <form method="POST">
+            <input type="hidden" name="action" value="delete_account">
+            <input type="text" name="delete_confirm" class="form-control" placeholder="Type DELETE here" style="text-align: center; margin-bottom: 20px;" required>
+            
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn btn-ghost btn-block" onclick="closeDeleteModal()">Cancel</button>
+                <button type="submit" class="btn btn-danger btn-block">Confirm Deletion</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php include 'includes/footer.php'; ?>
 
 <script>
-function savePrefs() {
-  alert('Preferences saved!');
-}
-function validatePwForm() {
-  const np = document.getElementById('newPw').value;
-  const cp = document.getElementById('confirmPw').value;
-  const err = document.getElementById('pwError');
-  if (np !== cp) { 
-      err.style.display = 'block'; 
-      return false; 
-  }
-  err.style.display = 'none'; 
-  return true;
+function openDeleteModal() { document.getElementById('deleteModal').classList.add('open'); }
+function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('open'); }
+
+// Close modal on click outside
+window.onclick = function(event) {
+    if (event.target == document.getElementById('deleteModal')) closeDeleteModal();
 }
 </script>
 
