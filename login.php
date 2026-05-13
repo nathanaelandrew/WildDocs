@@ -141,9 +141,6 @@ function setRole(role) {
   // Update Tab visuals
   document.getElementById('tabStudent').classList.toggle('active', role === 'student');
   document.getElementById('tabAdmin').classList.toggle('active', role === 'admin');
-  
-  // Hide registration link for admins if desired
-  document.getElementById('authFooter').style.opacity = (role === 'admin') ? '0' : '1';
 }
 </script>
 

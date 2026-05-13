@@ -271,9 +271,9 @@ if (isset($_SESSION['user_id'])) {
 <!-- CTA BANNER -->
 <section class="cta-banner" style="border-radius: 0;">
   <div class="container">
-    <h2 class="fade-up">Ready to get started?</h2>
-    <p class="fade-up delay-1">Join thousands of students using WildDocuments for faster document processing.</p>
-    <div class="cta-banner__actions fade-up delay-2">
+    <h2 class="fade-up delay-1">Ready to get started?</h2>
+    <p class="fade-up delay-2">Join thousands of students using WildDocuments for faster document processing.</p>
+    <div class="cta-banner__actions fade-up delay-3 ">
       <a href="register.php" class="btn btn-primary btn-xl">Create Account</a>
       <a href="login.php" class="btn btn-outline btn-xl">Login to Portal</a>
     </div>
