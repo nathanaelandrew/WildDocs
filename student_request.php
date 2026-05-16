@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'student') {
 $pdo = getDB();
 $userId = $_SESSION['user_id'];
 
-// 1. Fetch student verification details (Parent/Child JOIN)
+// 1. Fetch student verification details
 $stmt = $pdo->prepare("
     SELECT u.first_name, u.last_name, s.student_number, s.program, s.year_level 
     FROM users u 
@@ -22,25 +22,25 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $student = $stmt->fetch();
 
-// 2. Fetch Document Types from the Database
+// 2. Fetch Document Types
 $docStmt = $pdo->query("SELECT * FROM document_types ORDER BY name ASC");
 $dbDocuments = $docStmt->fetchAll();
 
-// Year Level Suffix Logic (1st, 2nd, 3rd...)
+// Year Level Suffix
 $year = $student['year_level'] ?? 0;
 $suffix = match((int)$year) {
     1 => 'st', 2 => 'nd', 3 => 'rd', default => 'th'
 };
 
 // 3. Handle Form Submission
-$successMsg = "";
-$errorMsg = "";
+$swalType = "";
+$swalTitle = "";
+$swalMsg = "";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $docTypeId = $_POST['document_type_id'] ?? '';
     $purpose   = trim($_POST['purpose'] ?? '');
     
-    // Find the price from our DB results to ensure data integrity
     $selectedDoc = null;
     foreach($dbDocuments as $d) {
         if($d['id'] == $docTypeId) {
@@ -53,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $refNum = "WD-" . date('Y') . "-" . strtoupper(bin2hex(random_bytes(3)));
             
-            // Insert using the Normalized ID
             $insert = $pdo->prepare("
                 INSERT INTO requests (user_id, document_type_id, total_amount, reference_number, status, purpose, copies, is_viewed) 
                 VALUES (?, ?, ?, ?, 'pending', ?, 1, FALSE)
@@ -67,12 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $purpose
             ]);
 
-            $successMsg = "Request submitted successfully! Ref: <strong>$refNum</strong>";
+            $swalType = "success";
+            $swalTitle = "Request Submitted!";
+            $swalMsg = "Your reference number is: $refNum";
         } catch (Exception $e) {
-            $errorMsg = "Submission failed: " . $e->getMessage();
+            $swalType = "error";
+            $swalTitle = "Submission Failed";
+            $swalMsg = $e->getMessage();
         }
     } else {
-        $errorMsg = "Please complete all required fields.";
+        $swalType = "warning";
+        $swalTitle = "Missing Info";
+        $swalMsg = "Please complete all required fields.";
     }
 }
 ?>
@@ -83,11 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Request Document – WildDocuments</title>
     <link rel="stylesheet" href="css/styles.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         .page-header--slim { padding: 20px 0; } 
         .page-header--slim h1 { font-size: 1.5rem; margin: 0; }
         .page-header--slim p { margin: 2px 0 0; font-size: 0.85rem; }
-        .badge-paid { background:#EFF6FF; color:#1D4ED8; }
     </style>
 </head>
 <body>
@@ -98,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include 'includes/student_sidebar.php'; ?>
 
     <main class="main-content" style="background: var(--bg-light); min-height: 100vh; padding-bottom: 50px;">
-        <!-- UI: SLIMMED PAGE HEADER -->
         <header class="page-header page-header--slim">
             <div class="container">
                 <span class="page-header__eyebrow">Document Application</span>
@@ -110,14 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="dashboard-page">
             <div class="container--sm">
                 
-                <?php if ($successMsg): ?>
-                    <div class="alert alert-success" style="margin-bottom: 24px;">✅ <?php echo $successMsg; ?></div>
-                <?php endif; ?>
-
-                <?php if ($errorMsg): ?>
-                    <div class="alert alert-error" style="margin-bottom: 24px;">⚠️ <?php echo $errorMsg; ?></div>
-                <?php endif; ?>
-
                 <div class="card fade-up">
                     <div class="card__header">
                         <h3>Application Form</h3>
@@ -126,7 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="card__body" style="padding: 30px;">
                         <form method="POST" id="requestForm">
                             
-                            <!-- UI: STUDENT INFO SECTION (Read Only) -->
                             <div class="form-section">
                                 <div class="form-section__title">Student Information</div>
                                 <div class="form-row">
@@ -139,19 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="text" class="form-control" value="<?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?>" readonly style="background:#f8fafc;">
                                     </div>
                                 </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label class="form-label">Program</label>
-                                        <input type="text" class="form-control" value="<?= htmlspecialchars($student['program']) ?>" readonly style="background:#f8fafc;">
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Year Level</label>
-                                        <input type="text" class="form-control" value="<?= $year . $suffix ?> Year" readonly style="background:#f8fafc;">
-                                    </div>
-                                </div>
                             </div>
 
-                            <!-- UI: DOCUMENT SELECTION SECTION -->
                             <div class="form-section">
                                 <div class="form-section__title">Document Details</div>
                                 <div class="form-group">
@@ -167,11 +152,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Purpose of Request <span class="req">*</span></label>
-                                    <textarea name="purpose" class="form-control" placeholder="Describe the purpose (e.g. For Board Exam, Transfer, Employment)" required rows="3"></textarea>
+                                    <textarea name="purpose" id="purpose" class="form-control" placeholder="Describe the purpose (e.g. For Board Exam, Transfer, Employment)" required rows="3"></textarea>
                                 </div>
                             </div>
 
-                            <!-- UI: CRIMSON AMOUNT DISPLAY -->
                             <div class="amount-display">
                                 <div class="amount-display__label">Total to Pay</div>
                                 <div class="amount-display__value">
@@ -186,39 +170,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </form>
                     </div>
                 </div>
-
-                <p class="text-center" style="margin-top:20px; font-size:0.8rem; color:var(--text-muted);">
-                    All fees must be settled at the Cashier before processing starts.
-                </p>
             </div>
         </div>
     </main>
 </div>
 
-<!-- UI: DYNAMIC PRICING SCRIPT -->
 <script>
+// 1. DYNAMIC PRICING SCRIPT
 function updateAmount() {
     const select = document.getElementById('document_type');
     const selectedOption = select.options[select.selectedIndex];
-    
-    // Get price and label from the data attributes
     const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
     const label = selectedOption.text === "-- Select --" ? "No document selected" : selectedOption.text;
     
-    // Update the UI Amount Display
     document.getElementById('price_val').innerHTML = price.toFixed(2);
     document.getElementById('doc_name_display').innerHTML = label;
     
-    // Logic: Enable button only if a valid document is chosen
     const btn = document.getElementById('submitBtn');
-    if (price > 0) {
-        btn.disabled = false;
-        btn.style.opacity = "1";
-    } else {
-        btn.disabled = true;
-        btn.style.opacity = "0.5";
-    }
+    btn.disabled = (price <= 0);
+    btn.style.opacity = (price > 0) ? "1" : "0.5";
 }
+
+// 2. THE SAFETY NET (CONFIRMATION BOX)
+document.getElementById('requestForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Stop form from submitting immediately
+    
+    const docName = document.getElementById('document_type').options[document.getElementById('document_type').selectedIndex].text;
+    const price = document.getElementById('price_val').innerText;
+    const purpose = document.getElementById('purpose').value;
+
+    Swal.fire({
+        title: 'Confirm Request Details',
+        html: `
+            <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <p><strong>Document:</strong> ${docName}</p>
+                <p><strong>Total Amount:</strong> ₱${price}</p>
+                <p><strong>Purpose:</strong> ${purpose}</p>
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9rem; color: #64748b;">Please double-check before submitting.</p>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#991b1b', // Your crimson color
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Submit Request',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Re-trigger the submit without the event listener loop
+            this.submit();
+        }
+    });
+});
+
+// 3. SHOW PHP SUCCESS/ERROR MESSAGES
+<?php if ($swalType): ?>
+    Swal.fire({
+        icon: '<?= $swalType ?>',
+        title: '<?= $swalTitle ?>',
+        html: '<?= addslashes($swalMsg) ?>',
+        confirmButtonColor: '#991b1b'
+    });
+<?php endif; ?>
 </script>
 
 <?php include 'includes/footer.php'; ?>
