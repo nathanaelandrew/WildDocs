@@ -1,7 +1,5 @@
 <?php
 session_start();
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 require_once 'includes/db.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') { 
@@ -30,6 +28,8 @@ if (!empty($search)) {
     $sql .= " AND (r.reference_number ILIKE ? OR u.first_name ILIKE ? OR u.last_name ILIKE ? OR s.student_number ILIKE ?)";
     $searchTerm = "%$search%";
     $params = [$searchTerm, $searchTerm, $searchTerm, $searchTerm];
+} else {
+    $params = []; // Ensure it's an empty array if no search
 }
 
 $sql .= " ORDER BY r.created_at DESC"; // Changed to created_at for safety
@@ -105,7 +105,7 @@ try {
                                         <span class="text-muted"><?= htmlspecialchars($r['student_number']) ?></span>
                                     </td>
                                     <td><?= htmlspecialchars($r['document_name']) ?></td>
-                                    <td><?= date('M d, Y', strtotime($r['updated_at'])) ?></td>
+                                    <td><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
                                     <td style="text-align:center">
                                         <span class="badge-released">RELEASED</span>
                                     </td>
