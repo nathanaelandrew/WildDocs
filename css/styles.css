@@ -499,6 +499,7 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     display: flex; gap: 8px;
     justify-content: center; align-items: center;
     white-space: nowrap;
+    min-width: 250px;
 }
 .clickable-row { cursor: pointer; transition: background .15s; }
 .clickable-row:hover { background: var(--pink-bg) !important; }
@@ -707,3 +708,22 @@ textarea.form-control { resize: vertical; min-height: 90px; }
 .navbar__username { font-size: .88rem; font-weight: 600; color: #fff; }
 .hero__desc       { color: rgba(255,255,255,.7); font-size: 1rem; line-height: 1.7; margin-bottom: 32px; max-width: 520px; }
 .how-step--highlight { border: 2px solid var(--crimson); }
+
+.col-actions { 
+    display: flex; 
+    gap: 8px; 
+    justify-content: center; 
+    align-items: center;
+    min-width: 280px;
+}
+
+.btn-release-action { 
+    color: white; 
+    border: none; 
+    padding: 6px 12px; 
+    border-radius: 6px; 
+    font-weight: 700;
+    font-size: 0.75rem;
+    min-width: 85px;
+    transition: all 0.2s;
+}

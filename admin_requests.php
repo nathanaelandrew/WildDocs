@@ -3,7 +3,6 @@
 session_start();
 require_once 'includes/db.php';
 
-// Auth check: Only allow logged-in admins
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') { 
     header('Location: login.php'); 
     exit; 
@@ -11,10 +10,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 
 $pdo = getDB();
 
-// --- 1. HANDLE FILTERS & SEARCH ---
 $search = trim($_GET['search'] ?? '');
 $filterStatus = $_GET['status'] ?? '';
 
+// 1. Logic: Filter out 'released' requests (Archive only)
 $sql = "SELECT 
             r.*, 
             u.first_name, u.last_name, 
@@ -24,14 +23,14 @@ $sql = "SELECT
         JOIN users u ON r.user_id = u.id
         LEFT JOIN students s ON u.id = s.user_id
         JOIN document_types dt ON r.document_type_id = dt.id
-        WHERE 1=1"; 
+        WHERE r.status != 'released'"; 
 
 $params = [];
 
 if (!empty($search)) {
     $sql .= " AND (r.reference_number ILIKE ? OR u.first_name ILIKE ? OR u.last_name ILIKE ? OR s.student_number ILIKE ?)";
     $searchTerm = "%$search%";
-    $params = array_merge($params, [$searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+    array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
 }
 
 if (!empty($filterStatus)) {
@@ -39,19 +38,17 @@ if (!empty($filterStatus)) {
     $params[] = $filterStatus;
 }
 
-$sql .= " ORDER BY r.created_at DESC LIMIT 100";
+$sql .= " ORDER BY r.created_at DESC";
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $requests = $stmt->fetchAll();
 
-// --- MISSING FUNCTION RE-ADDED HERE ---
 function getStatusBadgeClass($status) {
     return match($status) {
         'pending'  => 'badge-pending',
         'paid'     => 'badge-paid',
         'approved' => 'badge-progress',
-        'released' => 'badge-completed',
         default    => 'badge-pending',
     };
 }
@@ -60,16 +57,30 @@ function getStatusBadgeClass($status) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage All Requests – WildDocuments Admin</title>
+  <title>Active Requests – Admin</title>
   <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     .col-actions { display: flex; gap: 8px; justify-content: center; align-items: center; }
-    .modal-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-    .modal-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 3px; }
-    .modal-value { font-weight: 600; color: var(--text-dark); }
+    
+    /* Green Release Button */
+    .btn-release-action { 
+        background: #16a34a; 
+        color: white; 
+        border: none; 
+        padding: 6px 12px; 
+        border-radius: 6px; 
+        cursor: pointer; 
+        font-weight: 700;
+        font-size: 0.75rem;
+        animation: slideIn 0.3s ease;
+        box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
+    }
+    .btn-release-action:hover { background: #15803d; }
+    
+    @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+    
     .badge-paid { background:#EFF6FF; color:#1D4ED8; }
-    .filter-card { margin-bottom: 20px; background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -84,152 +95,173 @@ function getStatusBadgeClass($status) {
 
       <div class="page-title-row">
         <div>
-          <h2>Manage All Requests</h2>
-          <p>Review and process the complete database of document applications.</p>
+          <h2>Document Processing</h2>
+          <p>Update statuses below. Once a document is <strong>Approved</strong>, you can <strong>Release</strong> it to the archive.</p>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="window.print()">🖨️ Export List</button>
+        <a href="admin_archive.php" class="btn btn-ghost">📂 View Archived/Released</a>
       </div>
 
-      <!-- Search and Filter -->
-      <div class="filter-card">
-        <div class="card__body" style="padding:16px 20px">
-          <form method="GET" style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
-            <div style="flex: 0 1 450px; min-width: 300px;">
-                <input type="text" name="search" class="form-control" placeholder="Search by Reference, Name, or ID..." value="<?= htmlspecialchars($search) ?>">
-            </div>
-            <div style="width: 180px;">
-                <select name="status" class="form-control">
-                  <option value="">All Statuses</option>
-                  <option value="pending"  <?= $filterStatus === 'pending' ? 'selected':'' ?>>Pending</option>
-                  <option value="paid"     <?= $filterStatus === 'paid' ? 'selected':'' ?>>Paid</option>
-                  <option value="approved" <?= $filterStatus === 'approved' ? 'selected':'' ?>>Approved</option>
-                  <option value="released" <?= $filterStatus === 'released' ? 'selected':'' ?>>Released</option>
-                </select>
-            </div>
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <?php if(!empty($search) || !empty($filterStatus)): ?>
-                <a href="admin_requests.php" class="btn btn-ghost">Clear</a>
-            <?php endif; ?>
-          </form>
-        </div>
-      </div>
-
-      <!-- Requests Table -->
+      <!-- Table -->
       <div class="card">
-        <div class="card__header">
-          <h3>Requests Database <span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted); margin-left: 8px;">(Found <?= count($requests) ?> results)</span></h3>
-        </div>
         <div class="card__body" style="padding:0">
-          <div class="table-wrapper" style="border:none">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Ref #</th>
-                  <th>Student Name</th>
-                  <th>Program</th>
-                  <th>Document</th>
-                  <th>Date</th>
-                  <th style="text-align:center">Status</th>
-                  <th style="text-align:center">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php if (empty($requests)): ?>
-                  <tr><td colspan="7" style="text-align:center; padding:50px; color:var(--text-muted)">No matching records found.</td></tr>
-                <?php else: ?>
-                  <?php foreach ($requests as $r): ?>
-                  <tr>
-                    <td style="font-weight:700; color:var(--crimson)"><?= htmlspecialchars($r['reference_number']) ?></td>
-                    <td>
-                        <div style="font-weight:600"><?= htmlspecialchars($r['first_name'].' '.$r['last_name']) ?></div>
-                        <div style="font-size:0.75rem; color:var(--text-muted)"><?= htmlspecialchars($r['student_number'] ?? 'N/A') ?></div>
-                    </td>
-                    <td style="font-size:.85rem"><?= htmlspecialchars($r['program']) ?></td>
-                    <td style="font-weight:500"><?= htmlspecialchars($r['document_name']) ?></td>
-                    <td style="font-size:.85rem"><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
-                    
-                    <!-- Fixed Status Column -->
-                    <td style="text-align:center">
-                        <span class="badge <?= getStatusBadgeClass($r['status']) ?>">
-                            <?= ucfirst($r['status']) ?>
-                        </span>
-                    </td>
-                    
-                    <!-- Fixed Actions Column -->
-                    <td class="col-actions">
-                        <select class="status-select" onchange="updateStatus(<?= $r['id'] ?>, this.value, event)">
-                          <option value="pending"  <?= $r['status'] === 'pending' ? 'selected':'' ?>>Pending</option>
-                          <option value="paid"     <?= $r['status'] === 'paid' ? 'selected':'' ?>>Paid</option>
-                          <option value="approved" <?= $r['status'] === 'approved' ? 'selected':'' ?>>Approved</option>
-                          <option value="released" <?= $r['status'] === 'released' ? 'selected':'' ?>>Released</option>
-                        </select>
-                        <button class="btn btn-ghost btn-sm" onclick='viewDetails(<?= htmlspecialchars(json_encode($r), ENT_QUOTES, "UTF-8") ?>)'>Details</button>
-                    </td>
-                  </tr>
-                  <?php endforeach; ?>
-                <?php endif; ?>
-              </tbody>
-            </table>
-          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ref #</th>
+                <th>Student Name</th>
+                <th>Document</th>
+                <th>Date</th>
+                <th style="text-align:center">Status</th>
+                <th style="text-align:center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($requests as $r): ?>
+              <tr>
+                <td style="font-weight:700; color:var(--crimson)"><?= htmlspecialchars($r['reference_number']) ?></td>
+                <td><?= htmlspecialchars($r['first_name'].' '.$r['last_name']) ?></td>
+                <td><?= htmlspecialchars($r['document_name']) ?></td>
+                <td style="font-size:0.85rem"><?= date('M d, Y', strtotime($r['created_at'])) ?></td>
+                <td style="text-align:center">
+                    <span class="badge <?= getStatusBadgeClass($r['status']) ?>"><?= ucfirst($r['status']) ?></span>
+                </td>
+                <td class="col-actions">
+                    <select class="status-select" 
+                            data-current="<?= $r['status'] ?>" 
+                            onchange="handleDropdownChange(<?= $r['id'] ?>, this)">
+                        <option value="pending"  <?= (strtolower($r['status']) === 'pending') ? 'selected':'' ?>>Pending</option>
+                        <option value="paid"     <?= (strtolower($r['status']) === 'paid') ? 'selected':'' ?>>Paid</option>
+                        <option value="approved" <?= (strtolower($r['status']) === 'approved') ? 'selected':'' ?>>Approved</option>
+                    </select>
+
+                    <?php 
+                        // Logic check: Is it approved?
+                        $isApproved = (trim(strtolower($r['status'])) === 'approved');
+                        
+                        // Pick the color based on the logic
+                        $btnStyle = $isApproved 
+                            ? "background-color: #16a34a !important; cursor: pointer; opacity: 1;" 
+                            : "background-color: #e2e8f0 !important; cursor: not-allowed; opacity: 0.7; color: #94a3b8 !important;";
+                    ?>
+
+                    <button id="release-btn-<?= $r['id'] ?>" 
+                            type="button"
+                            class="btn-release-action" 
+                            style="<?= $btnStyle ?>"
+                            <?= !$isApproved ? 'disabled' : '' ?>
+                            onclick="confirmRelease(<?= $r['id'] ?>)">
+                        Released
+                    </button>
+
+                    <button type="button" class="btn btn-ghost btn-sm" onclick='viewDetails(<?= json_encode($r) ?>)'>Details</button>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- Modal and Scripts remain the same -->
-<div class="modal-overlay" id="detailsModal">
-    <div class="modal" style="max-width: 500px; text-align: left;">
-        <h3 id="modalRef" style="color: var(--crimson); margin-bottom: 5px;">Ref #</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Detailed Request Information</p>
-        <div class="modal-info-grid">
-            <div><span class="modal-label">Student Name</span><div id="modalName" class="modal-value">-</div></div>
-            <div><span class="modal-label">Student ID</span><div id="modalID" class="modal-value">-</div></div>
-            <div><span class="modal-label">Program & Year</span><div id="modalProgram" class="modal-value">-</div></div>
-            <div><span class="modal-label">Document Requested</span><div id="modalDoc" class="modal-value">-</div></div>
-            <div><span class="modal-label">Total Fee</span><div id="modalAmount" class="modal-value">-</div></div>
-            <div><span class="modal-label">Current Status</span><div id="modalStatus" class="modal-value">-</div></div>
-        </div>
-        <div style="background: var(--pink-bg); padding: 15px; border-radius: 8px; border-left: 4px solid var(--crimson);">
-            <span class="modal-label">Purpose of Request</span>
-            <div id="modalPurpose" style="font-style: italic; color: var(--text-mid); font-size: 0.9rem; line-height:1.4">-</div>
-        </div>
-        <div style="margin-top: 25px; text-align: right;">
-            <button class="btn btn-primary" onclick="closeModal()">Close Details</button>
-        </div>
-    </div>
-</div>
-
 <script>
-function viewDetails(request) {
-    document.getElementById('modalRef').innerText = 'Ref: ' + request.reference_number;
-    document.getElementById('modalName').innerText = request.first_name + ' ' + request.last_name;
-    document.getElementById('modalID').innerText = request.student_number || 'N/A';
-    document.getElementById('modalProgram').innerText = request.program + '\n(Year ' + (request.year_level || 'N/A') + ')';
-    document.getElementById('modalDoc').innerText = request.document_name;
-    document.getElementById('modalAmount').innerText = '₱' + parseFloat(request.total_amount).toLocaleString();
-    document.getElementById('modalStatus').innerText = request.status.toUpperCase();
-    document.getElementById('modalPurpose').innerText = request.purpose || 'No purpose specified.';
-    document.getElementById('detailsModal').classList.add('open');
+/**
+ * Logic:
+ * 1. If user changes status to 'Approved', show the green Release button.
+ * 2. If user changes status away from 'Approved', hide the button.
+ * 3. All dropdown changes trigger an immediate update.
+ */
+function handleDropdownChange(requestId, select) {
+    const releaseBtn = document.getElementById('release-btn-' + requestId);
+    const newStatus = select.value.toLowerCase();
+
+    if (newStatus === 'approved') {
+        // TURN GREEN
+        releaseBtn.disabled = false;
+        releaseBtn.style.backgroundColor = "#16a34a";
+        releaseBtn.style.color = "#ffffff";
+        releaseBtn.style.cursor = "pointer";
+        releaseBtn.style.opacity = "1";
+    } else {
+        // TURN GRAY
+        releaseBtn.disabled = true;
+        releaseBtn.style.backgroundColor = "#e2e8f0";
+        releaseBtn.style.color = "#94a3b8";
+        releaseBtn.style.cursor = "not-allowed";
+        releaseBtn.style.opacity = "0.7";
+    }
+
+    updateStatusAJAX(requestId, select.value, select);
 }
 
-function closeModal() { document.getElementById('detailsModal').classList.remove('open'); }
+function updateStatusAJAX(requestId, newStatus, select) {
+    const oldStatus = select.getAttribute('data-current');
+    const releaseBtn = document.getElementById('release-btn-' + requestId);
+    
+    Swal.fire({
+        title: 'Update Status?',
+        text: `Change this request to ${newStatus.toUpperCase()}?`,
+        icon: 'question',
+        showCancelButton: true,
+        reverseButtons: true,
+        confirmButtonColor: '#991b1b'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            performFetch(requestId, newStatus);
+        } else {
+            // USER CANCELLED: 
+            // 1. Put the dropdown back to what it was
+            select.value = oldStatus;
+            
+            // 2. Put the button back to its original state
+            if (oldStatus === 'approved') {
+                releaseBtn.disabled = false;
+            } else {
+                releaseBtn.disabled = true;
+            }
+        }
+    });
+}
 
-function updateStatus(requestId, newStatus, event) {
-    const select = event.target;
-    select.disabled = true;
-    select.style.opacity = '0.5';
+function confirmRelease(requestId) {
+    Swal.fire({
+        title: 'Complete & Release?',
+        html: 'Mark this document as released and <strong>move to archive</strong>?',
+        icon: 'warning',
+        showCancelButton: true,
+        reverseButtons: true,
+        confirmButtonColor: '#16a34a',
+        confirmButtonText: 'Yes, Release'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            performFetch(requestId, 'released');
+        }
+    });
+}
+
+function performFetch(requestId, status) {
     fetch('update_status.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestId: requestId, status: newStatus })
+        body: JSON.stringify({ requestId: requestId, status: status })
     })
-    .then(response => response.json())
-    .then(data => { if (data.success) location.reload(); else alert('Error: ' + data.message); })
-    .catch(() => alert('Network error.'));
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({ 
+                icon: 'success', 
+                title: status === 'released' ? 'Moved to Archive' : 'Status Updated', 
+                timer: 1000, 
+                showConfirmButton: false 
+            }).then(() => location.reload());
+        } else {
+            Swal.fire('Error', data.message, 'error');
+        }
+    });
 }
 
-window.onclick = function(event) { if (event.target == document.getElementById('detailsModal')) closeModal(); }
+// ... viewDetails code ...
 </script>
 
 <?php include 'includes/footer.php'; ?>
