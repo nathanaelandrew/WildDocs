@@ -98,7 +98,7 @@ function getStatusBadgeClass($status) {
           <h2>Document Processing</h2>
           <p>Update statuses below. Once a document is <strong>Approved</strong>, you can <strong>Release</strong> it to the archive.</p>
         </div>
-        <a href="admin_archive.php" class="btn btn-ghost">📂 View Archived/Released</a>
+        <a href="admin_archive.php" class="btn btn-ghost">📂 View Released</a>
       </div>
 
       <!-- Table -->
