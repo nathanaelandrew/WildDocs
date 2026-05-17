@@ -117,7 +117,6 @@ if (isset($_SESSION['user_id'])) {
 
 <?php include 'includes/navbar.php'; ?>
 
-<!-- HERO SECTION -->
 <section class="hero">
   <div class="hero__bg-img"></div>
   <div class="hero__overlay"></div>
@@ -145,7 +144,6 @@ if (isset($_SESSION['user_id'])) {
   </div>
 </section>
 
-<!-- FEATURES SECTION -->
 <section class="section section--white" id="features">
   <div class="container">
     <div class="section__header">
@@ -189,7 +187,6 @@ if (isset($_SESSION['user_id'])) {
   </div>
 </section>
 
-<!-- HOW IT WORKS SECTION -->
 <section class="section section--light" id="how">
   <div class="container">
     <div class="section__header">
@@ -199,7 +196,6 @@ if (isset($_SESSION['user_id'])) {
     </div>
 
     <div class="how-grid">
-      <!-- Step 1 -->
       <div class="how-step">
         <div class="how-step__num">1</div>
         <h4>Sign Up</h4>
@@ -208,7 +204,6 @@ if (isset($_SESSION['user_id'])) {
 
       <div class="how-arrow">→</div>
 
-      <!-- Step 2 -->
       <div class="how-step">
         <div class="how-step__num">2</div>
         <h4>Select Document</h4>
@@ -217,7 +212,6 @@ if (isset($_SESSION['user_id'])) {
 
       <div class="how-arrow">→</div>
 
-      <!-- Step 3 -->
       <div class="how-step">
         <div class="how-step__num">3</div>
         <h4>Verify Payment</h4>
@@ -226,7 +220,6 @@ if (isset($_SESSION['user_id'])) {
 
       <div class="how-arrow">→</div>
 
-      <!-- Step 4 -->
       <div class="how-step how-step--highlight">
         <div class="how-step__num">4</div>
         <h4>Collect</h4>
@@ -236,7 +229,6 @@ if (isset($_SESSION['user_id'])) {
   </div>
 </section>
 
-<!-- AVAILABLE DOCUMENTS -->
 <section class="section section--white" id="documents">
   <div class="container">
     <div class="section__header">
@@ -247,29 +239,48 @@ if (isset($_SESSION['user_id'])) {
     <div class="docs-grid">
       <div class="doc-tile">
         <div class="doc-tile__icon">📜</div>
-        <h4>Transcript (TOR)</h4>
-        <p>Official record of grades</p>
+        <h4>Official Transcript of Records</h4>
+        <p>Official record of your entire academic history</p>
+      </div>
+      <div class="doc-tile">
+        <div class="doc-tile__icon">📊</div>
+        <h4>Certified Copy of Grades</h4>
+        <p>Certified copy of semester grade records (TCG)</p>
+      </div>
+      <div class="doc-tile">
+        <div class="doc-tile__icon">🚪</div>
+        <h4>Transfer Credentials</h4>
+        <p>Required processing for student transfers</p>
+      </div>
+      <div class="doc-tile">
+        <div class="doc-tile__icon">📄</div>
+        <h4>Honorable Dismissal</h4>
+        <p>Official clearance indicating clean academic leave</p>
+      </div>
+      <div class="doc-tile">
+        <div class="doc-tile__icon">📖</div>
+        <h4>Course Syllabus</h4>
+        <p>Certified subject descriptions for credit evaluation</p>
       </div>
       <div class="doc-tile">
         <div class="doc-tile__icon">🎓</div>
         <h4>Diploma Copy</h4>
-        <p>Certified replacement</p>
+        <p>Certified replacement or copy of graduation diploma</p>
+      </div>
+      <div class="doc-tile">
+        <div class="doc-tile__icon">🎖️</div>
+        <h4>Good Moral Character</h4>
+        <p>Official student conduct and clearance certificate</p>
       </div>
       <div class="doc-tile">
         <div class="doc-tile__icon">📋</div>
         <h4>Certification Letter</h4>
-        <p>Proof of enrollment or completion</p>
-      </div>
-      <div class="doc-tile">
-        <div class="doc-tile__icon">🎖️</div>
-        <h4>Good Moral</h4>
-        <p>Character clearance</p>
+        <p>Official proof of enrollment, units, or completion status</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA BANNER -->
 <section class="cta-banner" style="border-radius: 0;">
   <div class="container">
     <h2 class="fade-up delay-1">Ready to get started?</h2>
