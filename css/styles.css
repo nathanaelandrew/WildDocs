@@ -727,3 +727,170 @@ textarea.form-control { resize: vertical; min-height: 90px; }
     min-width: 85px;
     transition: all 0.2s;
 }
+
+/* ══════════════════════════════════════════════════════
+   ADDITIONS — pagination, flash toast, confirm modal
+══════════════════════════════════════════════════════ */
+
+/* ── Pagination ───────────────────────────────────── */
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border-light);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.pagination__info {
+    font-size: .8rem;
+    color: var(--text-muted);
+}
+.pagination__controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    background: var(--white);
+    cursor: pointer;
+    transition: all .15s;
+    text-decoration: none;
+    font-family: inherit;
+}
+.page-btn:hover:not(:disabled) {
+    border-color: var(--crimson);
+    color: var(--crimson);
+    background: var(--pink-bg);
+}
+.page-btn.active {
+    background: var(--crimson);
+    border-color: var(--crimson);
+    color: #fff;
+}
+.page-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+.page-btn--dots {
+    border-color: transparent;
+    background: transparent;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* ── Flash Toast ──────────────────────────────────── */
+#wd-flash-toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    font-size: .88rem;
+    font-weight: 600;
+    color: #fff;
+    min-width: 260px;
+    max-width: 380px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity .25s, transform .25s;
+    pointer-events: none;
+}
+#wd-flash-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+#wd-flash-toast.toast-success { background: #166534; }
+#wd-flash-toast.toast-error   { background: #991b1b; }
+#wd-flash-toast.toast-info    { background: #1e40af; }
+#wd-flash-toast.toast-warning { background: #92400e; }
+#wd-flash-toast .toast-icon   { font-size: 1.2rem; flex-shrink: 0; }
+#wd-flash-toast .toast-close  {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.7);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 0;
+    line-height: 1;
+}
+#wd-flash-toast .toast-close:hover { color: #fff; }
+
+/* ── Confirm Modal (custom, replaces confirm()) ───── */
+#wd-confirm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 8000;
+    background: rgba(0,0,0,.45);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+#wd-confirm-overlay.open { display: flex; }
+#wd-confirm-box {
+    background: #fff;
+    border-radius: var(--radius-xl);
+    padding: 36px 32px 28px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: popIn .2s ease;
+}
+#wd-confirm-box .confirm-icon {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+#wd-confirm-box h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+#wd-confirm-box p {
+    font-size: .88rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.6;
+}
+#wd-confirm-box .confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* ── Action column fix for admin table ───────────── */
+.data-table td.col-actions {
+    display: table-cell;
+    vertical-align: middle;
+    white-space: nowrap;
+    text-align: center;
+    padding: 10px 16px;
+}
+.col-actions-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    justify-content: center;
+    flex-wrap: nowrap;
+}

@@ -108,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="container">
                 <span class="page-header__eyebrow">Document Application</span>
                 <h1>New Request</h1>
-                <p>Provide your details below to apply for official school records.</p>
+                <p>Provide your details below to request for official school records.</p>
             </div>
         </header>
 

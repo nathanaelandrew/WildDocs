@@ -76,7 +76,7 @@ $initials = strtoupper(substr($admin['first_name'], 0, 1) . substr($admin['last_
       <div class="page-title-row">
         <div>
           <h2>Account Profile</h2>
-          <p>Manage your personal information and account security.</p>
+          <p>Manage your personal information.</p>
         </div>
       </div>
 

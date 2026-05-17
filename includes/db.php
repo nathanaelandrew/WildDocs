@@ -20,8 +20,7 @@ function getDB() {
         
         $dsn = "pgsql:host=$host;port=$port;dbname=$dbname;" .
                "sslmode=require;" .
-               "sslcert=$certPath;" . // Points to your blank file
-               "gssencmode=disable";
+               "sslcert=$certPath;";
 
         $pdo = new PDO($dsn, $user, $password, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
