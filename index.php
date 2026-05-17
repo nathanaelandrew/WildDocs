@@ -245,7 +245,7 @@ if (isset($_SESSION['user_id'])) {
       <div class="doc-tile">
         <div class="doc-tile__icon">📊</div>
         <h4>Certified Copy of Grades</h4>
-        <p>Certified copy of semester grade records (TCG)</p>
+        <p>Certified copy of semester grade records</p>
       </div>
       <div class="doc-tile">
         <div class="doc-tile__icon">🚪</div>
